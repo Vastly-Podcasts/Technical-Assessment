@@ -50,18 +50,17 @@
  *
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import ProcessedVideo, { FilterSelector } from './components/ProcessedVideo';
 import { FilterType } from './utils/filters';
 import { videoUrl } from './consts';
 
 /** Available viewing modes */
-type ViewMode = 'minimal' | 'theater' | 'window' | 'editor';
+type ViewMode = 'minimal' | 'theater' | 'editor';
 
 const VIEW_MODES: { id: ViewMode; label: string; icon: string }[] = [
   { id: 'minimal', label: 'Minimal', icon: '○' },
   { id: 'theater', label: 'Theater', icon: '▮' },
-  { id: 'window', label: 'Window', icon: '⊞' },
   { id: 'editor', label: 'Editor', icon: '◫' },
 ];
 
@@ -83,6 +82,11 @@ const App: React.FC = () => {
   // Mask threshold - controls person/background boundary
   const [maskThreshold, setMaskThreshold] = useState(0.7);
 
+  // Timeline clip position (0-100, represents percentage)
+  const [clipPosition, setClipPosition] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const timelineTrackRef = useRef<HTMLDivElement>(null);
+
   /**
    * Handle filter change from selector.
    * Could be extended to persist preference or sync with backend.
@@ -98,6 +102,43 @@ const App: React.FC = () => {
   const handleProcessingChange = useCallback((processing: boolean) => {
     setIsProcessing(processing);
   }, []);
+
+  /**
+   * Handle mouse down on timeline clip - start dragging
+   */
+  const handleClipMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  /**
+   * Handle mouse move - update clip position while dragging
+   */
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !timelineTrackRef.current) return;
+
+      const track = timelineTrackRef.current;
+      const rect = track.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      // Clip is 60% wide, so constrain position to 0-40% so it doesn't overflow
+      const percentage = Math.max(0, Math.min(40, (x / rect.width) * 100));
+      setClipPosition(percentage);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+      };
+    }
+  }, [isDragging]);
 
   return (
     <div className={`app-container mode-${viewMode}`}>
@@ -118,13 +159,6 @@ const App: React.FC = () => {
 
       {/* Main viewport */}
       <div className="viewport">
-        {/* Window frame (only visible in window mode) */}
-        {viewMode === 'window' && (
-          <div className="window-frame">
-            <div className="window-sill" />
-          </div>
-        )}
-
         {/* Editor timeline bar (only visible in editor mode) */}
         {viewMode === 'editor' && (
           <div className="editor-header">
@@ -158,10 +192,13 @@ const App: React.FC = () => {
         {/* Editor timeline (only visible in editor mode) */}
         {viewMode === 'editor' && (
           <div className="editor-timeline">
-            <div className="timeline-track">
-              <div className="timeline-clip" />
+            <div className="timeline-track" ref={timelineTrackRef}>
+              <div 
+                className="timeline-clip" 
+                style={{ left: `${clipPosition}%` }}
+                onMouseDown={handleClipMouseDown}
+              />
             </div>
-            <div className="timeline-scrubber" />
           </div>
         )}
       </div>

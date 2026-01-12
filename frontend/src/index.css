@@ -479,3 +479,382 @@ code {
   top: -20px;
   left: 0;
 }
+
+/* ============================================================================
+   VIEWING MODES
+   Different ways to experience the video
+   ============================================================================ */
+
+/* App container base */
+.app-container {
+  min-height: 100vh;
+  transition: background-color 0.4s var(--ease-out);
+}
+
+/* Viewport - the main video area */
+.viewport {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 24px 20px;
+  transition: all 0.4s var(--ease-out);
+}
+
+.video-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Mode selector */
+.mode-selector {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bg-surface);
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  z-index: 100;
+}
+
+.mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+
+.mode-btn:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.mode-btn.active {
+  background: var(--text-primary);
+  color: var(--bg-surface);
+}
+
+.mode-icon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.mode-label {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .mode-label {
+    display: inline;
+  }
+}
+
+/* ============================================================================
+   MODE: MINIMAL (default)
+   ============================================================================ */
+.mode-minimal {
+  background: var(--bg-page);
+}
+
+.mode-minimal .viewport {
+  padding-top: 60px;
+}
+
+.mode-minimal .video-container {
+  border-radius: 8px;
+  box-shadow: var(--shadow-md);
+}
+
+/* ============================================================================
+   MODE: THEATER
+   Cinematic dark experience
+   ============================================================================ */
+.mode-theater {
+  background: #0a0a0a;
+}
+
+.mode-theater .viewport {
+  min-height: calc(100vh - 100px);
+  padding: 40px;
+}
+
+.mode-theater .video-stage {
+  position: relative;
+}
+
+/* Letterbox bars */
+.mode-theater .video-stage::before,
+.mode-theater .video-stage::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 120%;
+  height: 24px;
+  background: #000;
+  z-index: 10;
+}
+
+.mode-theater .video-stage::before {
+  top: -24px;
+}
+
+.mode-theater .video-stage::after {
+  bottom: -24px;
+}
+
+.mode-theater .video-container {
+  border-radius: 0;
+  box-shadow: 0 0 80px rgba(255, 255, 255, 0.05);
+}
+
+.mode-theater .controls-section {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 16px 24px;
+  margin: 0 auto;
+  max-width: 600px;
+}
+
+.mode-theater .filter-selector label,
+.mode-theater .threshold-control label {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-theater .filter-select {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mode-theater .filter-select:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mode-theater .threshold-control input[type="range"] {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.mode-theater .threshold-control input[type="range"]::-webkit-slider-thumb {
+  background: #fff;
+}
+
+.mode-theater .threshold-control .threshold-value {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-theater .processing-indicator {
+  background: rgba(52, 199, 89, 0.2);
+  color: #4ade80;
+}
+
+.mode-theater .pulse-dot {
+  background: #4ade80;
+}
+
+.mode-theater .mode-selector {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.mode-theater .mode-btn {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mode-theater .mode-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.mode-theater .mode-btn.active {
+  background: #fff;
+  color: #0a0a0a;
+}
+
+/* ============================================================================
+   MODE: EDITOR
+   Professional video editing aesthetic
+   ============================================================================ */
+.mode-editor {
+  background: #1a1a1e;
+}
+
+.mode-editor .viewport {
+  padding: 0;
+  min-height: calc(100vh - 80px);
+}
+
+.editor-header {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  background: #242428;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.editor-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.editor-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.editor-timecode {
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.mode-editor .video-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #0d0d0f;
+}
+
+.mode-editor .video-container {
+  border-radius: 0;
+  box-shadow: none;
+  outline: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.editor-timeline {
+  width: 100%;
+  padding: 16px 20px;
+  background: #242428;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.timeline-track {
+  height: 48px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  padding: 8px;
+  position: relative;
+}
+
+.timeline-clip {
+  height: 100%;
+  width: 60%;
+  background: linear-gradient(90deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 3px;
+  position: absolute;
+  left: 0;
+  top: 0;
+  cursor: grab;
+  user-select: none;
+  transition: cursor 0.1s;
+}
+
+.timeline-clip:active {
+  cursor: grabbing;
+}
+
+.timeline-clip::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 8px,
+    rgba(255, 255, 255, 0.1) 8px,
+    rgba(255, 255, 255, 0.1) 9px
+  );
+  border-radius: 3px;
+}
+
+
+.mode-editor .controls-section {
+  background: #242428;
+  padding: 12px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  gap: 20px;
+}
+
+.mode-editor .filter-selector label,
+.mode-editor .threshold-control label {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-editor .filter-select {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mode-editor .filter-select:hover {
+  background: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mode-editor .threshold-control input[type="range"] {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mode-editor .threshold-control input[type="range"]::-webkit-slider-thumb {
+  background: #3b82f6;
+}
+
+.mode-editor .threshold-control .threshold-value {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-editor .processing-indicator {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.mode-editor .pulse-dot {
+  background: #ef4444;
+}
+
+.mode-editor .mode-selector {
+  background: rgba(36, 36, 40, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.mode-editor .mode-btn {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mode-editor .mode-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+}
+
+.mode-editor .mode-btn.active {
+  background: #3b82f6;
+  color: #fff;
+}
