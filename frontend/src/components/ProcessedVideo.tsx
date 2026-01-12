@@ -228,7 +228,9 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
         src={src}
         onLoadedMetadata={handleLoadedMetadata}
         crossOrigin="anonymous"
-        controls
+        autoPlay
+        playsInline
+        loop
         muted
         style={{ display: 'none' }}
       />

@@ -128,6 +128,7 @@ export function useSegmentation(config: SegmentationConfig = {}) {
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
+  const isModelLoadedRef = useRef(false); // Ref to avoid stale closure in processFrame
 
   /**
    * Initialize MediaPipe model (lazy - only when needed)
@@ -236,7 +237,12 @@ export function useSegmentation(config: SegmentationConfig = {}) {
       // Results come back via onResults callback (set up in initializeModel)
       await segmentation.send({ image: video });
 
-      if (!isModelLoaded) setIsModelLoaded(true);
+      // Mark model as loaded after first successful send
+      // Use ref to avoid stale closure, then sync to state
+      if (!isModelLoadedRef.current) {
+        isModelLoadedRef.current = true;
+        setIsModelLoaded(true);
+      }
 
       // Schedule next frame
       animationFrameRef.current = requestAnimationFrame(processFrame);
