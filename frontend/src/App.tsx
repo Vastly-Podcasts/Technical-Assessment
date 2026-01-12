@@ -51,8 +51,9 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import ProcessedVideo, { FilterSelector } from './components/ProcessedVideo';
+import ProcessedVideo, { FilterSelector, BlendCurveSelector } from './components/ProcessedVideo';
 import { FilterType } from './utils/filters';
+import { BlendCurveType } from './utils/compositingCurves';
 import { videoUrl } from './consts';
 import { isValidVideoFile, isFileSizeValid, MAX_FILE_SIZE } from './utils/videoValidation';
 import { Timeframe, sortTimeframes } from './utils/timeframes';
@@ -84,6 +85,12 @@ const App: React.FC = () => {
 
   // Mask threshold - controls person/background boundary
   const [maskThreshold, setMaskThreshold] = useState(0.7);
+
+  // Blend curve - controls edge transition smoothness
+  const [blendCurve, setBlendCurve] = useState<BlendCurveType>('smootherstep');
+
+  // Edge feather radius - controls mask edge blur
+  const [featherRadius, setFeatherRadius] = useState(2);
 
   // Timeline clip position (0-100, represents percentage)
   const [clipPosition, setClipPosition] = useState(0);
@@ -308,6 +315,8 @@ const App: React.FC = () => {
               src={objectUrl || videoUrl}
               filterType={filterType}
               maskThreshold={maskThreshold}
+              blendCurve={blendCurve}
+              featherRadius={featherRadius}
               onProcessingChange={handleProcessingChange}
               onDurationChange={handleDurationChange}
               activeTimeframes={sortedTimeframes}
@@ -353,6 +362,22 @@ const App: React.FC = () => {
             onChange={(e) => setMaskThreshold(parseFloat(e.target.value))}
           />
           <span className="threshold-value">{Math.round(maskThreshold * 100)}%</span>
+        </div>
+
+        <BlendCurveSelector value={blendCurve} onChange={setBlendCurve} />
+
+        <div className="feather-control">
+          <label htmlFor="feather-slider">Edge Softness</label>
+          <input
+            id="feather-slider"
+            type="range"
+            min="0"
+            max="10"
+            step="1"
+            value={featherRadius}
+            onChange={(e) => setFeatherRadius(parseInt(e.target.value, 10))}
+          />
+          <span className="feather-value">{featherRadius}px</span>
         </div>
 
         {/* Video upload control */}

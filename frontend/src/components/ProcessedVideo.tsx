@@ -59,6 +59,11 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useSegmentation, SegmentationResult } from '../hooks/useSegmentation';
 import { applyFilter, FilterType, FILTER_INFO } from '../utils/filters';
 import { Timeframe, isTimeframeActive } from '../utils/timeframes';
+import {
+  BlendCurveType,
+  applyBlendCurve,
+  BLEND_CURVE_INFO,
+} from '../utils/compositingCurves';
 import { apiGet } from '../utils/api';
 import { API_ENDPOINTS, HEALTH_CHECK_INTERVAL } from '../utils/config';
 
@@ -74,6 +79,22 @@ interface ProcessedVideoProps {
    * - 0.5 = balanced default
    */
   maskThreshold?: number;
+  /**
+   * Blend curve for mask-to-blend-factor mapping.
+   * Controls how smooth/sharp the transition is at edges.
+   * Default: 'smootherstep' for extra smooth transitions.
+   */
+  blendCurve?: BlendCurveType;
+  /**
+   * Edge feathering radius in pixels.
+   * Softens the mask edges for smoother person/background boundaries.
+   * - 0 = no feathering (sharp edges)
+   * - 1-2 = subtle softening
+   * - 3-5 = moderate blur
+   * - 6+ = heavy blur (may affect person details)
+   * Default: 2
+   */
+  featherRadius?: number;
   /** Callback when video metadata loads */
   onLoadedMetadata?: () => void;
   /** Callback when video duration is available */
@@ -96,6 +117,8 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   src,
   filterType = 'grayscale',
   maskThreshold = 0.5,
+  blendCurve = 'smootherstep',
+  featherRadius = 2,
   onLoadedMetadata,
   onDurationChange,
   activeTimeframes = [],
@@ -328,8 +351,8 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       applyFilter(filtered, filterType);
 
       // Feather mask edges for smoother boundaries using GPU-accelerated blur
-      // Small radius (2px) provides subtle edge softening without performance hit
-      const featheredMask = featherMask(mask, 2);
+      // Uses configurable radius (default 2px for subtle edge softening)
+      const featheredMask = featherRadius > 0 ? featherMask(mask, featherRadius) : mask;
 
       // Create output buffer
       const output = ctx.createImageData(width, height);
@@ -340,18 +363,14 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
 
       /**
        * MediaPipe Selfie Segmentation mask interpretation:
-       * 
+       *
        * Mask values are 0-255 where:
        * - HIGH values (255) = Person/foreground probability
        * - LOW values (0) = Background probability
-       * 
-       * We use a smooth transition curve to map mask values to blend factors.
+       *
+       * We use a configurable blend curve to map mask values to blend factors.
        * The threshold parameter controls where the transition occurs.
-       * 
-       * Smoothstep function provides a smooth S-curve transition:
-       * - Below threshold*0.5: mostly background (filtered)
-       * - Above threshold*1.5: mostly person (original)
-       * - Between: smooth blend
+       * The blendCurve parameter controls the shape of the transition.
        */
 
       // Convert threshold to 0-255 scale
@@ -365,24 +384,16 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       const transitionRange = transitionHigh - transitionLow;
       const useBinaryThreshold = transitionRange < 1.0; // Less than 1 pixel difference
 
-      // Smoothstep helper: smooth S-curve interpolation
-      const smoothstep = (t: number): number => {
-        // Clamp t to [0, 1]
-        t = Math.max(0, Math.min(1, t));
-        // Smoothstep: 3t² - 2t³
-        return t * t * (3 - 2 * t);
-      };
-
       for (let i = 0; i < frameData.length; i += 4) {
         // Get mask value (0-255)
         const maskValue = maskData[i];
 
-        // Map mask value to blend factor using smooth transition
+        // Map mask value to blend factor using configurable curve
         // maskValue < transitionLow → blendFactor ≈ 0 (background)
         // maskValue > transitionHigh → blendFactor ≈ 1 (person)
-        // Between → smooth curve
+        // Between → curve-shaped blend
         let blendFactor: number;
-        
+
         if (useBinaryThreshold) {
           // Binary threshold when transition region is too narrow
           // Use threshold255 as the cutoff point
@@ -399,8 +410,8 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
             normalizedValue = (maskValue - transitionLow) / transitionRange;
           }
 
-          // Apply smoothstep for smoother curve
-          blendFactor = smoothstep(normalizedValue);
+          // Apply selected blend curve for edge transition
+          blendFactor = applyBlendCurve(normalizedValue, blendCurve);
         }
 
         // Blend: output = original * blend + filtered * (1 - blend)
@@ -415,7 +426,7 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       // Draw composited result to canvas
       ctx.putImageData(output, 0, 0);
     },
-    [filterType, maskThreshold, featherMask]
+    [filterType, maskThreshold, blendCurve, featherRadius, featherMask]
   );
   
   // Update timeframes ref when prop changes (avoids stale closure)
@@ -636,6 +647,39 @@ export const FilterSelector: React.FC<{
         {FILTER_INFO.map((filter) => (
           <option key={filter.id} value={filter.id}>
             {filter.name}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+};
+
+/**
+ * BlendCurveSelector component for choosing edge transition curve.
+ *
+ * Different curves produce different edge blend characteristics:
+ * - Smootherstep: Extra smooth, best for most cases
+ * - Smoothstep: Balanced S-curve
+ * - Linear: Sharp edges, fast
+ * - Sigmoid: Very defined separation
+ * - Power curves: Bias toward person or background
+ */
+export const BlendCurveSelector: React.FC<{
+  value: BlendCurveType;
+  onChange: (curve: BlendCurveType) => void;
+}> = ({ value, onChange }) => {
+  return (
+    <div className="blend-curve-selector">
+      <label htmlFor="blend-curve-select">Edge Blend</label>
+      <select
+        id="blend-curve-select"
+        value={value}
+        onChange={(e) => onChange(e.target.value as BlendCurveType)}
+        className="filter-select"
+      >
+        {BLEND_CURVE_INFO.map((curve) => (
+          <option key={curve.id} value={curve.id} title={curve.description}>
+            {curve.name}
           </option>
         ))}
       </select>
