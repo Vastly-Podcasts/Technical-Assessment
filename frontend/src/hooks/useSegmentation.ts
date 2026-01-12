@@ -129,6 +129,8 @@ export function useSegmentation(config: SegmentationConfig = {}) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isModelLoaded, setIsModelLoaded] = useState(false);
   const isModelLoadedRef = useRef(false); // Ref to avoid stale closure in processFrame
+  const isProcessingRef = useRef(false); // Track if we're currently processing a frame
+  const lastFrameTimeRef = useRef<number>(0); // Track frame timing for skipping
 
   /**
    * Initialize MediaPipe model (lazy - only when needed)
@@ -214,6 +216,8 @@ export function useSegmentation(config: SegmentationConfig = {}) {
      * - Syncs with browser's paint cycle (smoother)
      * - Automatically pauses when tab is hidden (saves CPU)
      * - Consistent timing regardless of processing speed
+     * 
+     * Frame skipping: If processing takes too long, skip frames to maintain smooth playback
      */
     const processFrame = async () => {
       // Skip if video is paused or ended
@@ -236,18 +240,43 @@ export function useSegmentation(config: SegmentationConfig = {}) {
         canvasRef.current.height = video.videoHeight;
       }
 
-      // Send frame to MediaPipe for segmentation
+      // Skip if we're still processing the previous frame (prevents queue buildup)
+      // This ensures we maintain smooth playback even if MediaPipe is slow
+      if (isProcessingRef.current) {
+        animationFrameRef.current = requestAnimationFrame(processFrame);
+        return;
+      }
+
+      // Check if we should skip this frame (target ~30fps, skip if too soon)
+      const now = performance.now();
+      const timeSinceLastFrame = now - lastFrameTimeRef.current;
+      const targetFrameTime = 1000 / 30; // 30fps target
+      
+      if (timeSinceLastFrame < targetFrameTime * 0.8) {
+        // Too soon, skip this frame
+        animationFrameRef.current = requestAnimationFrame(processFrame);
+        return;
+      }
+
+      // Mark as processing
+      isProcessingRef.current = true;
+      lastFrameTimeRef.current = now;
+
+      // Send frame to MediaPipe for segmentation (non-blocking)
       // Results come back via onResults callback (set up in initializeModel)
-      await segmentation.send({ image: video });
+      segmentation.send({ image: video }).then(() => {
+        isProcessingRef.current = false;
+      }).catch(() => {
+        isProcessingRef.current = false;
+      });
 
       // Mark model as loaded after first successful send
-      // Use ref to avoid stale closure, then sync to state
       if (!isModelLoadedRef.current) {
         isModelLoadedRef.current = true;
         setIsModelLoaded(true);
       }
 
-      // Schedule next frame
+      // Schedule next frame immediately (don't wait for processing)
       animationFrameRef.current = requestAnimationFrame(processFrame);
     };
 

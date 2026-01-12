@@ -181,50 +181,51 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     }
   }, []);
 
+  // Reuse temp canvases for feathering to avoid allocations
+  const tempCanvas1Ref = useRef<HTMLCanvasElement | null>(null);
+  const tempCanvas2Ref = useRef<HTMLCanvasElement | null>(null);
+  
   /**
-   * Apply Gaussian blur to mask for edge feathering.
+   * Apply GPU-accelerated blur to mask for edge feathering.
    * 
-   * This softens the mask edges for smoother person/background boundaries.
-   * Uses a simple box blur approximation (fast, good enough for edges).
+   * Uses canvas filter API (GPU-accelerated) instead of CPU box blur for performance.
+   * This is critical for real-time processing - CPU blur was causing severe lag.
    * 
    * @param maskData - Mask ImageData to blur
-   * @param radius - Blur radius (default: 3 pixels for subtle feathering)
+   * @param blurRadius - CSS blur radius (default: 2px for subtle feathering)
    * @returns New ImageData with blurred mask
    */
-  const featherMask = useCallback((maskData: ImageData, radius: number = 3): ImageData => {
-    const { width, height, data } = maskData;
-    const blurred = new ImageData(new Uint8ClampedArray(data), width, height);
-    const blurredData = blurred.data;
-
-    // Simple box blur - average pixels in radius
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        let sum = 0;
-        let count = 0;
-
-        for (let dy = -radius; dy <= radius; dy++) {
-          for (let dx = -radius; dx <= radius; dx++) {
-            const nx = x + dx;
-            const ny = y + dy;
-
-            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-              const idx = (ny * width + nx) * 4;
-              sum += data[idx]; // Use red channel (grayscale mask)
-              count++;
-            }
-          }
-        }
-
-        const idx = (y * width + x) * 4;
-        const avg = sum / count;
-        blurredData[idx] = avg;     // R
-        blurredData[idx + 1] = avg; // G
-        blurredData[idx + 2] = avg; // B
-        blurredData[idx + 3] = 255; // A
-      }
+  const featherMask = useCallback((maskData: ImageData, blurRadius: number = 2): ImageData => {
+    const { width, height } = maskData;
+    
+    // Create/reuse temporary canvases for GPU-accelerated blur
+    if (!tempCanvas1Ref.current) {
+      tempCanvas1Ref.current = document.createElement('canvas');
+      tempCanvas2Ref.current = document.createElement('canvas');
     }
+    const sourceCanvas = tempCanvas1Ref.current;
+    const destCanvas = tempCanvas2Ref.current;
+    
+    sourceCanvas.width = width;
+    sourceCanvas.height = height;
+    destCanvas.width = width;
+    destCanvas.height = height;
+    
+    const sourceCtx = sourceCanvas.getContext('2d', { willReadFrequently: false });
+    const destCtx = destCanvas.getContext('2d', { willReadFrequently: false });
+    
+    if (!sourceCtx || !destCtx) return maskData; // Fallback if canvas unavailable
 
-    return blurred;
+    // Draw mask to source canvas
+    sourceCtx.putImageData(maskData, 0, 0);
+    
+    // Apply GPU-accelerated blur filter to destination canvas
+    destCtx.filter = `blur(${blurRadius}px)`;
+    destCtx.drawImage(sourceCanvas, 0, 0);
+    destCtx.filter = 'none'; // Reset filter
+    
+    // Read back blurred result
+    return destCtx.getImageData(0, 0, width, height);
   }, []);
 
   /**
@@ -256,9 +257,9 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       // Apply the selected filter to the copy
       applyFilter(filtered, filterType);
 
-      // Feather mask edges for smoother boundaries
-      // Small radius (3px) provides subtle edge softening without halo effect
-      const featheredMask = featherMask(mask, 3);
+      // Feather mask edges for smoother boundaries using GPU-accelerated blur
+      // Small radius (2px) provides subtle edge softening without performance hit
+      const featheredMask = featherMask(mask, 2);
 
       // Create output buffer
       const output = ctx.createImageData(width, height);
