@@ -71,6 +71,9 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
 import logging
+import os
+import uuid
+from werkzeug.utils import secure_filename
 from helpers import *
 
 app = Flask(__name__)
@@ -215,16 +218,81 @@ def upload_video():
     """
     Upload a video for processing.
 
-    TODO: Implement video upload handling
-    - Accept multipart/form-data
-    - Validate file type and size
-    - Save to temp directory
-    - Return video ID for processing
+    Accepts multipart/form-data with 'video' field.
+    Validates file type, size, and saves to temp directory.
+    
+    Request:
+        multipart/form-data with field 'video' containing video file
+        
+    Response (200):
+        {
+            "video_id": "abc123",
+            "path": "/path/to/temp/file.mp4"
+        }
+        
+    Response (400):
+        {"error": "Error message"}
     """
-    return jsonify({
-        "error": "Not implemented",
-        "message": "Video upload is planned for future implementation"
-    }), 501
+    try:
+        # Check if file is present
+        if 'video' not in request.files:
+            return jsonify({"error": "No video file provided"}), 400
+        
+        file = request.files['video']
+        
+        # Check if file was actually selected
+        if file.filename == '':
+            return jsonify({"error": "No file selected"}), 400
+        
+        # Validate file type
+        filename = secure_filename(file.filename)
+        allowed_extensions = {'.mp4', '.webm', '.mov', '.avi', '.mkv'}
+        file_ext = os.path.splitext(filename)[1].lower()
+        
+        # Check extension
+        if file_ext not in allowed_extensions:
+            return jsonify({
+                "error": f"Invalid file type. Allowed: {', '.join(allowed_extensions)}"
+            }), 400
+        
+        # Check MIME type (if provided)
+        mime_type = file.content_type
+        if mime_type and not mime_type.startswith('video/'):
+            return jsonify({"error": "File must be a video"}), 400
+        
+        # Generate video ID and temp path
+        video_id = str(uuid.uuid4())[:8]
+        temp_path = get_temp_path() + file_ext
+        
+        # Save file
+        file.save(temp_path)
+        
+        # Validate file size
+        try:
+            validate_file_size(temp_path, MAX_FILE_SIZE_UPLOAD)
+        except ValueError as e:
+            # Clean up file if too large
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+            return jsonify({"error": str(e)}), 400
+        
+        # Validate path is in temp directory
+        validate_temp_path(temp_path)
+        
+        # Store video_id -> path mapping
+        from helpers import _uploaded_videos
+        _uploaded_videos[video_id] = temp_path
+        
+        logger.info(f"Video uploaded: {video_id} -> {temp_path}")
+        
+        return jsonify({
+            "video_id": video_id,
+            "path": temp_path
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"Upload error: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/process", methods=["POST"])
@@ -241,6 +309,33 @@ def process_video():
         "error": "Not implemented",
         "message": "Server-side processing is planned for future implementation"
     }), 501
+
+
+@app.route("/api/video/jobs/<job_id>", methods=["GET"])
+def get_job_status(job_id):
+    """
+    Get status of a background job.
+    
+    Response (200):
+        {
+            "status": "pending|processing|completed|failed",
+            "progress": 0-100,
+            "result": {...} (if completed),
+            "error": "..." (if failed)
+        }
+        
+    Response (404):
+        {"error": "Job not found"}
+    """
+    try:
+        from helpers import get_job
+        job = get_job(job_id)
+        return jsonify(job), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        logger.error(f"Error getting job status: {e}")
+        return jsonify({"error": str(e)}), 500
 
 
 # =============================================================================

@@ -10,7 +10,7 @@
  * - Validate timeframes (start < end, within video duration)
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Timeframe, generateTimeframeId } from '../utils/timeframes';
 
 interface TimeframeEditorProps {
@@ -56,9 +56,21 @@ export const TimeframeEditor: React.FC<TimeframeEditorProps> = ({
   videoDuration,
 }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [newStart, setNewStart] = useState<string>('');
-  const [newEnd, setNewEnd] = useState<string>('');
+  const [newStart, setNewStart] = useState<number>(0);
+  const [newEnd, setNewEnd] = useState<number>(Math.max(10, videoDuration > 0 ? Math.min(10, videoDuration) : 10));
   const [error, setError] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [addingId, setAddingId] = useState<string | null>(null);
+  const [editingStart, setEditingStart] = useState<number>(0);
+  const [editingEnd, setEditingEnd] = useState<number>(0);
+
+  // Update newEnd when videoDuration changes
+  useEffect(() => {
+    if (videoDuration > 0) {
+      setNewEnd((prev) => Math.min(prev, videoDuration));
+      setNewStart((prev) => (prev >= videoDuration ? 0 : prev));
+    }
+  }, [videoDuration]);
 
   // Validation helper
   const validateTimeframe = useCallback(
@@ -82,15 +94,12 @@ export const TimeframeEditor: React.FC<TimeframeEditorProps> = ({
 
   // Add new timeframe
   const handleAdd = useCallback(() => {
-    const start = parseTime(newStart);
-    const end = parseTime(newEnd);
-
-    if (start === null || end === null) {
-      setError('Please enter valid times (MM:SS or seconds)');
+    if (newEnd <= newStart) {
+      setError('End time must be greater than start time');
       return;
     }
 
-    const validationError = validateTimeframe(start, end);
+    const validationError = validateTimeframe(newStart, newEnd);
     if (validationError) {
       setError(validationError);
       return;
@@ -98,20 +107,29 @@ export const TimeframeEditor: React.FC<TimeframeEditorProps> = ({
 
     const newTimeframe: Timeframe = {
       id: generateTimeframeId(),
-      start,
-      end,
+      start: newStart,
+      end: newEnd,
     };
 
+    setAddingId(newTimeframe.id);
     onTimeframesChange([...timeframes, newTimeframe]);
-    setNewStart('');
-    setNewEnd('');
+    setNewStart(0);
+    setNewEnd(Math.max(10, videoDuration > 0 ? Math.min(10, videoDuration) : 10));
     setError(null);
-  }, [newStart, newEnd, timeframes, validateTimeframe, onTimeframesChange]);
+    
+    // Clear adding animation after transition
+    setTimeout(() => setAddingId(null), 300);
+  }, [newStart, newEnd, timeframes, validateTimeframe, onTimeframesChange, videoDuration]);
 
-  // Remove timeframe
+  // Remove timeframe with animation
   const handleRemove = useCallback(
     (id: string) => {
-      onTimeframesChange(timeframes.filter((tf) => tf.id !== id));
+      setRemovingId(id);
+      // Wait for exit animation before removing
+      setTimeout(() => {
+        onTimeframesChange(timeframes.filter((tf) => tf.id !== id));
+        setRemovingId(null);
+      }, 250);
     },
     [timeframes, onTimeframesChange]
   );
@@ -138,8 +156,13 @@ export const TimeframeEditor: React.FC<TimeframeEditorProps> = ({
 
   // Start editing a timeframe
   const handleEdit = useCallback((id: string) => {
-    setEditingId(id);
-  }, []);
+    const timeframe = timeframes.find((tf) => tf.id === id);
+    if (timeframe) {
+      setEditingStart(timeframe.start);
+      setEditingEnd(timeframe.end);
+      setEditingId(id);
+    }
+  }, [timeframes]);
 
   // Cancel editing
   const handleCancelEdit = useCallback(() => {
@@ -147,148 +170,234 @@ export const TimeframeEditor: React.FC<TimeframeEditorProps> = ({
     setError(null);
   }, []);
 
-  return (
-    <div className="timeframe-editor" style={{ padding: '1rem', border: '1px solid #ccc', borderRadius: '4px', marginTop: '1rem' }}>
-      <h3 style={{ marginTop: 0, marginBottom: '1rem' }}>Filter Timeframes</h3>
-      <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
-        Define time ranges when the filter should be active. Leave empty to apply filter to entire video.
-      </p>
+  // Calculate slider percentage
+  const getSliderPercentage = (value: number): number => {
+    if (videoDuration <= 0) return 0;
+    return Math.min(100, Math.max(0, (value / videoDuration) * 100));
+  };
 
-      {/* Add new timeframe */}
-      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          Start:
-          <input
-            type="text"
-            value={newStart}
-            onChange={(e) => setNewStart(e.target.value)}
-            placeholder="0:00 or 0"
-            style={{ width: '80px', padding: '0.25rem' }}
-          />
-        </label>
-        <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-          End:
-          <input
-            type="text"
-            value={newEnd}
-            onChange={(e) => setNewEnd(e.target.value)}
-            placeholder="10:00 or 600"
-            style={{ width: '80px', padding: '0.25rem' }}
-          />
-        </label>
-        <button
-          onClick={handleAdd}
-          style={{
-            padding: '0.25rem 0.75rem',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            borderRadius: '4px',
-            cursor: 'pointer',
-          }}
-        >
-          Add
-        </button>
+  // Get max duration for sliders
+  const maxDuration = videoDuration > 0 ? videoDuration : 600; // Default to 10 minutes if no duration
+
+  return (
+    <div className="timeframe-editor">
+      <div className="timeframe-editor__header">
+        <h3 className="timeframe-editor__title">Filter Timeframes</h3>
+        <p className="timeframe-editor__description">
+          Define time ranges when the filter should be active. Leave empty to apply filter to entire video.
+        </p>
       </div>
 
-      {/* Error message */}
-      {error && (
-        <div style={{ color: '#dc3545', fontSize: '0.9rem', marginBottom: '1rem' }}>
-          {error}
+      {/* Add new timeframe */}
+      {videoDuration > 0 && (
+        <div className="timeframe-editor__form">
+          <div className="timeframe-editor__slider-container">
+            <div className="timeframe-editor__slider-header">
+              <span className="timeframe-editor__slider-label">Start: {formatTime(newStart)}</span>
+              <span className="timeframe-editor__slider-label">End: {formatTime(newEnd)}</span>
+              <span className="timeframe-editor__slider-label">Duration: {formatTime(newEnd - newStart)}</span>
+            </div>
+            
+            {/* Visual timeline */}
+            <div className="timeframe-editor__timeline">
+              <div 
+                className="timeframe-editor__timeline-range"
+                style={{
+                  left: `${getSliderPercentage(newStart)}%`,
+                  width: `${getSliderPercentage(newEnd) - getSliderPercentage(newStart)}%`,
+                }}
+              />
+            </div>
+
+            {/* Sliders */}
+            <div className="timeframe-editor__sliders">
+              <div className="timeframe-editor__slider-wrapper">
+                <input
+                  type="range"
+                  className="timeframe-editor__slider"
+                  min="0"
+                  max={maxDuration}
+                  step="0.1"
+                  value={newStart}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    setNewStart(value);
+                    if (value >= newEnd) {
+                      setNewEnd(Math.min(value + 1, maxDuration));
+                    }
+                    setError(null);
+                  }}
+                  aria-label="Start time"
+                />
+              </div>
+              <div className="timeframe-editor__slider-wrapper">
+                <input
+                  type="range"
+                  className="timeframe-editor__slider"
+                  min="0"
+                  max={maxDuration}
+                  step="0.1"
+                  value={newEnd}
+                  onChange={(e) => {
+                    const value = parseFloat(e.target.value);
+                    setNewEnd(value);
+                    if (value <= newStart) {
+                      setNewStart(Math.max(0, value - 1));
+                    }
+                    setError(null);
+                  }}
+                  aria-label="End time"
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            className="timeframe-editor__add-btn"
+            onClick={handleAdd}
+            aria-label="Add timeframe"
+            disabled={newEnd <= newStart}
+          >
+            <span>Add Timeframe</span>
+          </button>
+
+          {/* Error message */}
+          {error && (
+            <div className={`timeframe-editor__error ${error ? 'timeframe-editor__error--show' : ''}`}>
+              {error}
+            </div>
+          )}
+        </div>
+      )}
+
+      {videoDuration <= 0 && (
+        <div className="timeframe-editor__no-video">
+          <p>Upload a video to define timeframes</p>
         </div>
       )}
 
       {/* Timeframes list */}
       {timeframes.length === 0 ? (
-        <p style={{ color: '#999', fontStyle: 'italic' }}>No timeframes defined. Filter applies to entire video.</p>
+        <div className="timeframe-editor__empty">
+          <div className="timeframe-editor__empty-icon">⏱</div>
+          <p className="timeframe-editor__empty-text">No timeframes defined.</p>
+          <p className="timeframe-editor__empty-hint">Filter applies to entire video.</p>
+        </div>
       ) : (
-        <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+        <ul className="timeframe-editor__list">
           {timeframes.map((tf) => (
             <li
               key={tf.id}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.5rem',
-                marginBottom: '0.5rem',
-                backgroundColor: '#f8f9fa',
-                borderRadius: '4px',
-              }}
+              className={`timeframe-editor__item ${
+                removingId === tf.id ? 'timeframe-editor__item--removing' : ''
+              } ${addingId === tf.id ? 'timeframe-editor__item--adding' : ''} ${
+                editingId === tf.id ? 'timeframe-editor__item--editing' : ''
+              }`}
             >
               {editingId === tf.id ? (
-                <>
-                  <input
-                    type="text"
-                    defaultValue={formatTime(tf.start)}
-                    onBlur={(e) => {
-                      const start = parseTime(e.target.value);
-                      if (start !== null) {
-                        handleUpdate(tf.id, start, tf.end);
-                      }
-                    }}
-                    style={{ width: '60px', padding: '0.25rem' }}
-                  />
-                  <span>to</span>
-                  <input
-                    type="text"
-                    defaultValue={formatTime(tf.end)}
-                    onBlur={(e) => {
-                      const end = parseTime(e.target.value);
-                      if (end !== null) {
-                        handleUpdate(tf.id, tf.start, end);
-                      }
-                    }}
-                    style={{ width: '60px', padding: '0.25rem' }}
-                  />
-                  <button
-                    onClick={handleCancelEdit}
-                    style={{
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.8rem',
-                      backgroundColor: '#6c757d',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Cancel
-                  </button>
-                </>
+                <div className="timeframe-editor__edit-form">
+                  <div className="timeframe-editor__slider-container timeframe-editor__slider-container--inline">
+                    <div className="timeframe-editor__slider-header">
+                      <span className="timeframe-editor__slider-label">Start: {formatTime(editingStart)}</span>
+                      <span className="timeframe-editor__slider-label">End: {formatTime(editingEnd)}</span>
+                    </div>
+                    
+                    {/* Visual timeline */}
+                    <div className="timeframe-editor__timeline">
+                      <div 
+                        className="timeframe-editor__timeline-range"
+                        style={{
+                          left: `${getSliderPercentage(editingStart)}%`,
+                          width: `${getSliderPercentage(editingEnd) - getSliderPercentage(editingStart)}%`,
+                        }}
+                      />
+                    </div>
+
+                    {/* Sliders */}
+                    <div className="timeframe-editor__sliders">
+                      <div className="timeframe-editor__slider-wrapper">
+                        <input
+                          type="range"
+                          className="timeframe-editor__slider"
+                          min="0"
+                          max={maxDuration}
+                          step="0.1"
+                          value={editingStart}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            setEditingStart(value);
+                            if (value >= editingEnd) {
+                              setEditingEnd(Math.min(value + 1, maxDuration));
+                            }
+                          }}
+                          aria-label="Edit start time"
+                        />
+                      </div>
+                      <div className="timeframe-editor__slider-wrapper">
+                        <input
+                          type="range"
+                          className="timeframe-editor__slider"
+                          min="0"
+                          max={maxDuration}
+                          step="0.1"
+                          value={editingEnd}
+                          onChange={(e) => {
+                            const value = parseFloat(e.target.value);
+                            setEditingEnd(value);
+                            if (value <= editingStart) {
+                              setEditingStart(Math.max(0, value - 1));
+                            }
+                          }}
+                          aria-label="Edit end time"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="timeframe-editor__edit-actions">
+                    <button
+                      className="timeframe-editor__btn timeframe-editor__btn--save"
+                      onClick={() => handleUpdate(tf.id, editingStart, editingEnd)}
+                      aria-label="Save changes"
+                    >
+                      Save
+                    </button>
+                    <button
+                      className="timeframe-editor__btn timeframe-editor__btn--cancel"
+                      onClick={handleCancelEdit}
+                      aria-label="Cancel editing"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
-                  <span style={{ flex: 1 }}>
-                    {formatTime(tf.start)} - {formatTime(tf.end)}
-                  </span>
-                  <button
-                    onClick={() => handleEdit(tf.id)}
-                    style={{
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.8rem',
-                      backgroundColor: '#6c757d',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleRemove(tf.id)}
-                    style={{
-                      padding: '0.25rem 0.5rem',
-                      fontSize: '0.8rem',
-                      backgroundColor: '#dc3545',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    Remove
-                  </button>
+                  <div className="timeframe-editor__item-content">
+                    <span className="timeframe-editor__time-range">
+                      <span className="timeframe-editor__time">{formatTime(tf.start)}</span>
+                      <span className="timeframe-editor__time-separator">→</span>
+                      <span className="timeframe-editor__time">{formatTime(tf.end)}</span>
+                    </span>
+                    <span className="timeframe-editor__duration">
+                      ({formatTime(tf.end - tf.start)})
+                    </span>
+                  </div>
+                  <div className="timeframe-editor__item-actions">
+                    <button
+                      className="timeframe-editor__btn timeframe-editor__btn--edit"
+                      onClick={() => handleEdit(tf.id)}
+                      aria-label="Edit timeframe"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="timeframe-editor__btn timeframe-editor__btn--remove"
+                      onClick={() => handleRemove(tf.id)}
+                      aria-label="Remove timeframe"
+                    >
+                      Remove
+                    </button>
+                  </div>
                 </>
               )}
             </li>

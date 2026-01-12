@@ -166,6 +166,7 @@ const App: React.FC = () => {
     setUploadError(null);
   }, []);
 
+
   /**
    * Handle video duration change - validate and clamp existing timeframes
    */
@@ -361,17 +362,7 @@ const App: React.FC = () => {
               cursor: 'pointer',
               fontSize: '0.875rem',
               textAlign: 'center',
-              transition: 'background-color 0.2s',
-            }}
-            onMouseEnter={(e) => {
-              if (!videoFile) {
-                e.currentTarget.style.backgroundColor = '#3182ce';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!videoFile) {
-                e.currentTarget.style.backgroundColor = '#4299e1';
-              }
+              display: 'block',
             }}
           >
             {videoFile ? videoFile.name : 'Upload Video'}
