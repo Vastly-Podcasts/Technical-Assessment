@@ -351,6 +351,15 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   );
 
   /**
+   * Reset video ready state when src changes
+   * This ensures the effect on line 371 re-runs when a new video loads
+   */
+  useEffect(() => {
+    setIsVideoReady(false);
+    stopSegmentation(); // Stop processing old video immediately
+  }, [src, stopSegmentation]);
+
+  /**
    * Handle video metadata loaded - set up dimensions
    */
   const handleLoadedMetadata = useCallback(() => {
