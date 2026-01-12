@@ -200,11 +200,36 @@ Status: READY FOR EXECUTION
 
 **Keep plans concise. If it's longer than 50 lines, you're overthinking.**
 
-**Ask user: "Plan ready. Proceed with execution?"**
+### 1.9 Critical Review (LAST LINE OF DEFENSE)
+
+**Before implementation, tear the plan apart.**
+
+**Execute:** `/tearitapart .claude/plans/{feature-name}.md`
+
+This will:
+- Review the plan from a world-class stranger's perspective
+- Find potential long-term issues, scalability problems, maintenance concerns
+- Identify simpler alternatives that might have been missed
+- Catch architectural issues before code is written
+
+**After review:**
+- If critical issues found: Update plan, then re-review
+- If concerns found: Address or acknowledge, then proceed
+- If clean: Proceed to implementation
+
+**Ask user: "Plan ready. Should I tear it apart first, or proceed to execution?"**
 
 ---
 
 ## PHASE 2: EXECUTION
+
+**Recommended: Use `/execute .claude/plans/{feature-name}.md` for advanced execution with:**
+- Cross-plan verification
+- Aggressive self-awareness
+- Continuous review and debug
+- Comprehensive HOW/WHY documentation
+
+**Or proceed with standard execution below:**
 
 ### 2.1 Setup
 

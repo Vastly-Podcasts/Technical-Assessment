@@ -9,6 +9,8 @@ allowed-tools: Read, Write, Edit, WebSearch, AskUserQuestion
 
 The goal is to find the simplest, most reliable solution using proven packages and patterns. Research exists to prevent reinventing the wheel—someone has already solved your problem better than you will on the first try.
 
+**Token Budget: ~2000-3000 tokens maximum. Plan first, execute deliberately, stop when you have enough.**
+
 ---
 
 ## THE RESEARCH MINDSET
@@ -82,9 +84,27 @@ After research, you should be able to answer:
 
 ## RESEARCH METHODOLOGY
 
-### Step 1: Identify Research Targets
+### Token Budget & Efficiency
 
-From the goal/feature, extract:
+**Total Research Budget: ~2000-3000 tokens maximum**
+- Planning phase: ~200 tokens
+- Search execution: ~1500-2000 tokens (5-8 targeted searches)
+- Documentation: ~500-800 tokens
+
+**Efficiency Rules:**
+- Plan all searches before executing any
+- Each search must have a specific, well-defined purpose
+- No random keyword searches - every query must be intentional
+- Stop when you have enough information (don't over-research)
+- Reuse information from one search to inform the next
+
+---
+
+### Step 1: Research Planning (MANDATORY - DO BEFORE ANY SEARCHES)
+
+**Slow down. Plan first. Execute deliberately.**
+
+Extract from the goal/feature:
 ```
 PROBLEM: [What are we trying to solve?]
 TECHNOLOGIES: [List all technologies/frameworks involved]
@@ -93,32 +113,91 @@ INTEGRATION_POINTS: [What other systems does this connect to?]
 VERSIONS: [What versions are we using?]
 ```
 
-### Step 2: Existing Solutions Search (CRITICAL - DO THIS FIRST)
+**Create a Research Plan:**
 
-**Before writing ANY code, find existing solutions:**
+Document the plan before executing any searches:
 
-**Search strategy:**
+```markdown
+## Research Plan
+
+### Goal
+{What we're trying to find}
+
+### Key Questions to Answer
+1. {Question 1}
+2. {Question 2}
+3. {Question 3}
+
+### Planned Searches (5-8 maximum)
+
+#### Search 1: Existing Solutions
+- **Purpose:** Find most popular package/library that solves {problem}
+- **Query:** "{problem} npm package" or "{problem} python library"
+- **Expected Result:** Package name, popularity stats, minimal code example
+- **Token Budget:** ~200 tokens
+
+#### Search 2: Official Documentation
+- **Purpose:** Check if {technology} provides built-in solution
+- **Query:** "{technology} {feature} official documentation"
+- **Expected Result:** Built-in API or official pattern
+- **Token Budget:** ~200 tokens
+
+#### Search 3: Common Problems
+- **Purpose:** Find most common pitfalls/errors
+- **Query:** "{technology} {use case} common mistakes" or "{technology} {use case} error"
+- **Expected Result:** 3-5 common pitfalls with fixes
+- **Token Budget:** ~250 tokens
+
+#### Search 4: {Specific Purpose}
+- **Purpose:** {What specific information do we need?}
+- **Query:** "{specific, targeted query}"
+- **Expected Result:** {What we expect to find}
+- **Token Budget:** ~200 tokens
+
+... (continue for 5-8 total searches)
+
+### Search Execution Order
+1. {Search 1} - {Why first}
+2. {Search 2} - {Why second}
+3. {Search 3} - {Why third}
+...
+
+### Success Criteria
+- [ ] Found at least 1 popular package/solution
+- [ ] Found at least 3 common pitfalls with fixes
+- [ ] Confirmed if built-in solution exists
+- [ ] Have enough info to choose simplest solution
 ```
-1. "{problem} npm package" or "{problem} python package"
-2. "{problem} library {language}"
-3. "{problem} solution {framework}"
-4. "{problem} best practice"
-5. "{problem} how to {framework}"
-```
+
+**STOP and review the plan. Only proceed when plan is complete and approved.**
+
+### Step 2: Execute Planned Searches (IN ORDER)
+
+**Execute searches one at a time, following the plan exactly.**
+
+**For each search:**
+1. Execute the planned query
+2. Extract only relevant information (don't read entire pages)
+3. Document findings immediately
+4. Check if this answers the question - if yes, move on
+5. If not, refine next search based on what you learned
+
+**Search Execution Rules:**
+- One search at a time
+- Extract key information only (don't read full articles)
+- Stop when you have the answer to that search's purpose
+- Don't do additional "just in case" searches
+- If a search doesn't yield results, refine the query and try once more
+
+### Step 3: Existing Solutions Search (CRITICAL - DO THIS FIRST)
+
+**This step should be in your research plan. Execute it as planned.**
 
 **What to find:**
 - **Most popular packages** - Check download stats (npm: weekly downloads, pypi: monthly downloads)
 - **Official solutions** - Does the framework/library provide this out of the box?
 - **Built-in APIs** - Native browser/Node/Python APIs that solve this
 - **Minimal examples** - Find the simplest working code that solves the problem
-- **Comparison articles** - "X vs Y vs Z" articles that compare solutions
-
-**Evaluation criteria:**
-- **Popularity** - More downloads = more battle-tested
-- **Simplicity** - Fewer lines of code = better
-- **Maintenance** - Recent updates, active maintainers
-- **Documentation** - Clear docs = easier to use correctly
-- **Bundle size** - Smaller is better (for frontend)
 
 **Document findings:**
 - Package name + version
@@ -127,110 +206,37 @@ VERSIONS: [What versions are we using?]
 - Maintenance status (last update, open issues)
 - Why this is the simplest solution
 
-### Step 3: Official Documentation Pass
+**Stop when:** You have 1-2 viable package options with popularity stats.
 
-**Search strategy:**
-```
-1. "{technology} official documentation {version}"
-2. "{technology} built-in {feature}"
-3. "{technology} native API {use case}"
-4. "{technology} best practices"
-5. "{technology} getting started guide"
-```
+### Step 4: Official Documentation Pass
+
+**This step should be in your research plan. Execute it as planned.**
 
 **What to capture:**
 - **Built-in solutions** - Does the framework provide this natively?
 - Official recommended patterns (prefer official over custom)
 - Official warnings/deprecations
-- Official security recommendations
-- Official performance guidelines
+
+**Stop when:** You've confirmed whether a built-in solution exists.
 
 ### Step 5: Problem Discovery Pass
 
-**Search strategy (use multiple query variations):**
-```
-1. "{technology} {use case} error"
-2. "{technology} {use case} issue"
-3. "{technology} {use case} problem"
-4. "{technology} {use case} not working"
-5. "{technology} {use case} troubleshooting"
-6. "{technology} common mistakes"
-7. "{technology} pitfalls"
-8. "{technology} gotchas"
-```
+**This step should be in your research plan. Execute it as planned.**
 
-**Where to search:**
-- GitHub Issues (filter: closed, has solution)
-- Stack Overflow (filter: has accepted answer, high votes)
-- Reddit (search in relevant subreddits)
-- Blog search engines (Dev.to, Medium search)
+**Search strategy (use ONE targeted query from your plan):**
+**Use ONE targeted query from your plan. Don't do multiple variations.**
 
 **What to capture:**
-- Specific error messages
-- Symptoms of problems
+- 3-5 most common error messages
 - Root causes
 - Step-by-step fixes
-- Workarounds (and why they're needed)
 
-### Step 6: Real-World Experience Pass
+**Stop when:** You have 3-5 common pitfalls documented with fixes.
 
-**Search strategy:**
-```
-1. "{technology} {use case} tutorial"
-2. "{technology} {use case} implementation"
-3. "{technology} {use case} blog"
-4. "{technology} production experience"
-5. "{technology} lessons learned"
-```
+### Step 6: Additional Planned Searches
 
-**Where to search:**
-- Personal developer blogs
-- Company engineering blogs (Netflix, Airbnb, etc.)
-- Medium/Dev.to articles
-- Conference talk transcripts
-- Podcast transcripts (if available)
-
-**What to capture:**
-- Real-world challenges encountered
-- Solutions that worked in production
-- Performance insights
-- Scaling considerations
-- Team experiences
-
-### Step 7: Integration & Compatibility Pass
-
-**Search strategy:**
-```
-1. "{technology} {other_technology} integration"
-2. "{technology} {other_technology} compatibility"
-3. "{technology} version {X} {other_technology} version {Y}"
-4. "{technology} breaking changes {version}"
-```
-
-**What to capture:**
-- Integration challenges
-- Version compatibility matrices
-- Breaking changes between versions
-- Migration paths
-
-### Step 8: Security & Performance Deep Dive
-
-**Search strategy:**
-```
-1. "{technology} security vulnerabilities"
-2. "{technology} security best practices"
-3. "{technology} performance issues"
-4. "{technology} performance optimization"
-5. "{technology} memory leaks"
-6. "{technology} security audit"
-```
-
-**What to capture:**
-- Known security issues
-- Security best practices
-- Performance bottlenecks
-- Optimization techniques
-- Resource usage patterns
+**Execute remaining searches from your plan in order.**
+**Stop when:** You've answered all key questions from Step 1.
 
 ---
 
@@ -485,18 +491,17 @@ If research didn't fully answer something:
 Before considering research complete, verify:
 
 ```
-✓ At least 3-5 common pitfalls documented with fixes
+✓ Research plan was created and followed
+✓ Token budget respected (~2000-3000 tokens total)
+✓ At least 1 popular package/solution identified
+✓ At least 3 common pitfalls documented with fixes
 ✓ Sources span at least 3 different categories
-✓ Each pitfall has both prevention and fix strategies
-✓ Version-specific information captured
-✓ Security considerations documented
-✓ Performance considerations documented
-✓ Integration concerns identified
 ✓ All sources properly cited with URLs
 ✓ Error messages documented (for quick lookup)
-✓ Contradictions between sources acknowledged
-✓ Unanswered questions identified
+✓ Key questions from plan are answered
 ```
+
+**Stop when you have enough information. Don't over-research.**
 
 ---
 

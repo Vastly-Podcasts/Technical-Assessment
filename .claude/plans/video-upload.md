@@ -1,130 +1,279 @@
 # Plan: Video Upload Feature
 
 ## Goal
-Allow users to upload any video file to replace the hardcoded video URL, enabling the application to process user-provided videos with background filters.
+Allow users to upload any video file to replace the hardcoded video URL.
 
 ## Done-When
-- [ ] User can select a video file from their device via file input
-- [ ] Selected video replaces the hardcoded video URL and plays in ProcessedVideo component
-- [ ] Video upload works with any common video format (mp4, webm, mov, etc.)
-- [ ] Object URLs are properly cleaned up when video changes or component unmounts
-- [ ] UI provides clear feedback during video selection and loading
-- [ ] Existing functionality (filters, segmentation) continues to work with uploaded videos
-- [ ] Backend upload endpoint is implemented (optional but recommended for larger files)
+- [ ] User can select video file via file input
+- [ ] Selected video plays in ProcessedVideo component
+- [ ] Object URLs properly cleaned up (no memory leaks)
+- [ ] Works with common video formats (mp4, webm, mov)
+- [ ] Default video still works when no upload selected
+- [ ] Clear error messages for invalid files
 
-## Assumptions (Confirmed)
-- **Tech Stack**: React 18 + TypeScript, Flask backend
-- **Video Processing**: Client-side using MediaPipe.js (no server-side processing required for basic upload)
-- **File Location**: Frontend upload UI in `App.tsx`, backend endpoint in `backend/main.py`
-- **Naming**: Follow existing patterns (camelCase for React, snake_case for Python)
-- **Error Handling**: Show user-friendly error messages for invalid files or upload failures
-- **Dependencies**: No new npm packages needed (URL.createObjectURL is native), backend may need werkzeug for file handling (already available via Flask)
-- **Browser Support**: Modern browsers that support File API and object URLs
-- **File Size**: No explicit limit for client-side object URLs (browser memory dependent), backend should have reasonable limits (e.g., 100MB)
+## Solution Exploration
+
+### Solution 1: Native File API + Object URLs (Client-Side Only)
+**How:** Use native `URL.createObjectURL()` with file input. No backend needed for preview.
+**Code required:** ~30 lines
+**Dependencies:** None (native browser APIs)
+**Pros:** 
+- Zero dependencies
+- Instant preview (no upload wait)
+- Works offline
+- Minimal code
+- Already documented in App.tsx comments
+**Cons:** 
+- Limited to browser memory for file size
+- No persistence (file lost on refresh)
+**Complexity:** Simple
+
+### Solution 2: Backend Upload + URL Return
+**How:** Upload to Flask endpoint, save to temp directory, return URL for frontend.
+**Code required:** ~80 lines (frontend + backend)
+**Dependencies:** None (Flask werkzeug handles multipart)
+**Pros:**
+- Files persist across page refreshes
+- Can handle larger files
+- Server-side validation
+**Cons:**
+- More code (frontend + backend)
+- Requires upload wait time
+- Need cleanup mechanism for temp files
+- More complex error handling
+**Complexity:** Medium
+
+### Solution 3: Third-Party Upload Library (react-dropzone, etc.)
+**How:** Use library like react-dropzone for drag-and-drop + upload.
+**Code required:** ~50 lines + dependency
+**Dependencies:** react-dropzone (~500KB bundle)
+**Pros:**
+- Drag-and-drop support
+- Built-in progress indicators
+- Handles edge cases
+**Cons:**
+- Adds dependency (maintenance burden)
+- Larger bundle size
+- Overkill for simple file input
+**Complexity:** Medium
+
+## Decision
+
+**Chosen:** Solution 1 (Native File API + Object URLs)
+**Why:** 
+- Simplest: ~30 lines vs 80+ lines
+- Zero dependencies (native browser API)
+- Matches existing codebase pattern (no external libs for simple features)
+- Already documented in App.tsx comments (lines 35-39)
+- Instant user feedback (no upload wait)
+- ProcessedVideo already accepts URL strings - no changes needed there
+
+**Rejected:**
+- Solution 2: Overkill for preview-only use case. Can add later if persistence needed.
+- Solution 3: Unnecessary dependency for simple file input. Native HTML5 is sufficient.
 
 ## Implementation Steps
 
-### Frontend Changes
+### Step 1: Add State and Error Handling in App.tsx
+- [ ] Add state: `const [videoFile, setVideoFile] = useState<File | null>(null)`
+- [ ] Add error state: `const [uploadError, setUploadError] = useState<string | null>(null)`
+- [ ] Store only `videoFile` in state (derive `objectUrl` in useEffect to avoid redundancy)
 
-1. [ ] Add video upload state management in `App.tsx`
-   - Add state for uploaded video file and object URL
-   - Add state for upload error messages
-   - Track whether using uploaded video or default URL
+### Step 2: Create File Validation Utility
+- [ ] Create `isValidVideoFile(file: File): boolean` function
+  - Check MIME type: `file.type.startsWith('video/')`
+  - Fallback: Check extension against `['.mp4', '.webm', '.mov', '.avi', '.mkv']`
+  - Return true if either check passes
+- [ ] Add file size validation: `MAX_FILE_SIZE = 500 * 1024 * 1024` (500MB)
+  - Show error if file exceeds limit
 
-2. [ ] Create file input UI component
-   - Add file input with `accept="video/*"` attribute
-   - Style to match existing UI (use Tailwind classes)
-   - Position in controls section or as a button above video
-   - Show current video source (uploaded filename or "Default video")
+### Step 3: Add File Input Handler
+- [ ] Handle file selection:
+  ```typescript
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) {
+      setUploadError(null); // User cancelled
+      return;
+    }
+    
+    // Validate file
+    if (!isValidVideoFile(file)) {
+      setUploadError("Please select a valid video file (mp4, webm, mov, avi, mkv)");
+      return;
+    }
+    
+    if (file.size > MAX_FILE_SIZE) {
+      setUploadError(`File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+      return;
+    }
+    
+    // Clear previous error, set new file
+    setUploadError(null);
+    setVideoFile(file);
+  };
+  ```
 
-3. [ ] Implement file selection handler
-   - Validate file type (check file.type starts with "video/")
-   - Validate file size (optional, warn if > 500MB)
-   - Create object URL using `URL.createObjectURL(file)`
-   - Update state to use object URL instead of hardcoded URL
-   - Show error message if validation fails
+### Step 4: Object URL Management with Proper Cleanup
+- [ ] Create useEffect to manage object URLs:
+  ```typescript
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+  
+  useEffect(() => {
+    if (!videoFile) {
+      // Clear object URL when no file selected
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        setObjectUrl(null);
+      }
+      return;
+    }
+    
+    // Store previous URL before creating new one
+    const previousUrl = objectUrl;
+    
+    // Create new object URL
+    const newUrl = URL.createObjectURL(videoFile);
+    setObjectUrl(newUrl);
+    
+    // Revoke previous URL AFTER new one is set (prevents race condition)
+    if (previousUrl) {
+      URL.revokeObjectURL(previousUrl);
+    }
+    
+    // Cleanup on unmount or when videoFile becomes null
+    return () => {
+      if (newUrl) {
+        URL.revokeObjectURL(newUrl);
+      }
+    };
+  }, [videoFile]); // Only depend on videoFile, not objectUrl
+  ```
 
-4. [ ] Implement cleanup logic
-   - Revoke previous object URL when new video is selected
-   - Revoke object URL on component unmount
-   - Use useEffect cleanup function
+### Step 5: Update ProcessedVideo Component
+- [ ] Modify ProcessedVideo to conditionally set crossOrigin:
+  ```typescript
+  // Detect if URL is object URL (starts with blob:) vs external URL
+  const isObjectUrl = src.startsWith('blob:');
+  
+  <video
+    src={src}
+    crossOrigin={isObjectUrl ? undefined : "anonymous"}
+    // ... other props
+  />
+  ```
+- [ ] **Note:** When `src` changes, ProcessedVideo will restart segmentation (expected behavior)
+  - Video element reloads → triggers `handleLoadedMetadata` → restarts MediaPipe pipeline
+  - This causes ~100-300ms delay and video state reset (play/pause/position)
+  - Document this as expected behavior (no fix needed)
 
-5. [ ] Update ProcessedVideo src prop
-   - Pass uploaded video URL or default URL based on state
-   - Ensure crossOrigin attribute works with object URLs (may need to remove it)
+### Step 6: Add onDurationChange Callback (Coordination with timeframe-filters)
+- [ ] Add prop to ProcessedVideo: `onDurationChange?: (duration: number) => void`
+- [ ] Call it in `handleLoadedMetadata`: `onDurationChange?.(video.duration)`
+- [ ] In App.tsx, store duration: `const [videoDuration, setVideoDuration] = useState<number | null>(null)`
+- [ ] Use for file validation (optional, but useful for future features)
 
-6. [ ] Add UI feedback
-   - Show loading state while video loads
-   - Display filename of uploaded video
-   - Add "Reset to default" button to clear upload
-   - Show error messages for invalid files
+### Step 7: Update App.tsx to Use Object URL
+- [ ] Pass `objectUrl || videoUrl` to ProcessedVideo `src` prop
+- [ ] Pass `onDurationChange={setVideoDuration}` to ProcessedVideo
 
-### Backend Changes (Optional but Recommended)
+### Step 8: Add File Input UI
+- [ ] Add file input in controls section:
+  ```typescript
+  <div className="upload-control">
+    <label htmlFor="video-upload" className="upload-button">
+      {videoFile ? videoFile.name : 'Upload Video'}
+    </label>
+    <input
+      id="video-upload"
+      type="file"
+      accept="video/*"
+      onChange={handleFileSelect}
+      style={{ display: 'none' }}
+    />
+    {videoFile && (
+      <button onClick={() => { setVideoFile(null); setUploadError(null); }}>
+        Reset
+      </button>
+    )}
+    {uploadError && (
+      <div className="error-message" style={{ color: 'red', fontSize: '0.875rem' }}>
+        {uploadError}
+      </div>
+    )}
+  </div>
+  ```
 
-7. [ ] Implement `/api/upload` endpoint
-   - Accept multipart/form-data with video file
-   - Validate file type (check Content-Type or file extension)
-   - Validate file size (e.g., max 100MB)
-   - Save to temp directory using `helpers.get_temp_path()`
-   - Return video ID and URL for frontend to use
-   - Handle errors gracefully (file too large, invalid type, etc.)
+### Step 9: Handle Edge Cases
+- [ ] Handle file input cancel (check `files.length === 0`)
+- [ ] Handle video load errors (listen to `video.onerror` in ProcessedVideo, fallback to default)
+- [ ] Document codec compatibility limitation (some codecs may not play in all browsers)
 
-8. [ ] Add file cleanup mechanism
-   - Implement periodic cleanup of old temp files (optional)
-   - Or clean up on server restart
+## Code Estimate
 
-9. [ ] Update health check endpoint
-   - Set `upload: True` in capabilities when upload is implemented
+**Files to modify:**
+- `frontend/src/App.tsx`: +60 lines (state, validation, handler, cleanup, UI, error handling)
+- `frontend/src/components/ProcessedVideo.tsx`: +5 lines (conditional crossOrigin, onDurationChange callback)
 
-10. [ ] Add CORS headers for file upload (if needed)
-    - Flask-CORS should handle this, but verify
+**Total:** ~65 lines of code (increased due to proper error handling and cleanup)
 
-### Integration
+## Validation
 
-11. [ ] Test with various video formats
-    - Test mp4, webm, mov files
-    - Test different resolutions and codecs
-    - Verify MediaPipe segmentation works with uploaded videos
+- [ ] Select video file, verify it plays
+- [ ] Test mp4, webm, mov, avi, mkv formats
+- [ ] Test file with correct extension but missing MIME type (extension fallback)
+- [ ] Test file with correct MIME type but wrong extension (MIME type check)
+- [ ] Test file size limit (500MB) - verify error shown
+- [ ] Test invalid file type (e.g., .pdf) - verify error shown
+- [ ] Test file input cancel - verify no error shown
+- [ ] Verify object URL cleanup (check memory in devtools, select multiple files)
+- [ ] Test rapid file selection (race condition prevention)
+- [ ] Test reset to default video
+- [ ] Verify crossOrigin is undefined for object URLs, "anonymous" for external URLs
+- [ ] Verify ProcessedVideo restarts segmentation on src change (expected behavior)
+- [ ] Test video load error - verify fallback to default
+- [ ] Verify no console errors
+- [ ] Type check passes (`npx tsc --noEmit`)
 
-12. [ ] Test edge cases
-    - Empty file selection (user cancels)
-    - Very large files (memory limits)
-    - Corrupted video files
-    - Unsupported formats
+## Common Pitfalls (from research)
 
-13. [ ] Verify existing features still work
-    - Filters apply correctly to uploaded videos
-    - Segmentation works with uploaded videos
-    - Timeline controls work (if applicable)
+1. **Memory leak from unreleased object URLs**
+   - Fix: Always revoke in useEffect cleanup, revoke previous URL AFTER creating new one
+   - Prevention: Store only videoFile in state, derive objectUrl in useEffect
 
-## Validation Steps
+2. **crossOrigin attribute on object URLs**
+   - Fix: Conditionally set: `crossOrigin={src.startsWith('blob:') ? undefined : "anonymous"}`
+   - Prevention: Detect object URLs by checking if URL starts with 'blob:'
 
-1. [ ] Manual: Select a video file, verify it plays and processes correctly
-2. [ ] Manual: Test with multiple video formats (mp4, webm, mov)
-3. [ ] Manual: Verify object URL cleanup (check browser memory, no leaks)
-4. [ ] Manual: Test error handling (invalid file, too large, etc.)
-5. [ ] Manual: Verify default video still works when no upload is selected
-6. [ ] Manual: Test backend upload endpoint (if implemented) with curl/Postman
-7. [ ] Code: Run TypeScript type check (`npx tsc --noEmit`)
-8. [ ] Code: Verify no console errors in browser
-9. [ ] Code: Check for memory leaks (object URLs properly revoked)
+3. **File validation too strict**
+   - Fix: Check both MIME type (`file.type.startsWith('video/')`) AND extension fallback
+   - Prevention: Support common extensions: `.mp4`, `.webm`, `.mov`, `.avi`, `.mkv`
 
-## Rollback Plan
+4. **Race conditions in cleanup**
+   - Fix: Store previous URL before creating new one, revoke after new URL is set
+   - Prevention: Only depend on `videoFile` in useEffect, not `objectUrl`
 
-If implementation causes issues:
-1. Revert changes to `App.tsx` (remove upload state and handlers)
-2. Revert changes to `backend/main.py` (restore placeholder endpoint)
-3. Ensure `consts.ts` videoUrl is still used as default
-4. Verify ProcessedVideo component still works with hardcoded URL
+5. **ProcessedVideo segmentation restart on src change**
+   - Expected behavior: Video reloads → segmentation restarts (~100-300ms delay)
+   - No fix needed: This is how video elements work, document as expected
 
-## Technical Notes
+6. **Missing error handling**
+   - Fix: Store errors in state, display inline, clear on success or new selection
+   - Prevention: Validate before creating object URL, show clear error messages
 
-- **Object URLs**: Use `URL.createObjectURL(file)` for client-side video preview. Must revoke with `URL.revokeObjectURL(url)` to prevent memory leaks.
-- **crossOrigin**: Object URLs don't need crossOrigin="anonymous" - this is only for external URLs. May need to conditionally set this attribute.
-- **File Validation**: Check `file.type` for "video/" prefix. Some browsers may not set this correctly, so also check file extension as fallback.
-- **Backend Upload**: If implementing backend upload, use Flask's `request.files` to access uploaded file. Save to temp directory and return URL that frontend can use.
-- **Error Messages**: Provide clear, user-friendly error messages (e.g., "Please select a valid video file" instead of technical errors).
+## Coordination with Other Features
+
+### ProcessedVideo Component Modifications
+- **crossOrigin conditional logic**: Both video-upload and timeframe-filters may need this
+- **onDurationChange callback**: Added for video-upload, also needed by timeframe-filters
+- **No conflicts**: timeframe-filters adds `activeTimeframes` prop, video-upload modifies `crossOrigin` - both safe
+
+### Implementation Order
+- **Video Upload should be implemented first** (simpler, foundation)
+- Establishes `onDurationChange` callback that timeframe-filters needs
+- Establishes video source change handling pattern
 
 ---
 Created: 2026-01-12
-Status: READY FOR EXECUTION
+Updated: 2026-01-12 (addressed teardown review issues)
+Status: READY FOR EXECUTION (after addressing teardown issues)
