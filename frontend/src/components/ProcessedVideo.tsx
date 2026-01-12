@@ -37,9 +37,9 @@
  *
  * - filterType: Any filter from filters.ts
  *
- * - To add edge feathering:
- *   Apply gaussian blur to mask before compositing.
- *   See commented code in composite() function.
+ * - Edge feathering: Applied automatically (3px blur radius)
+ *   Softens mask edges for smoother person/background boundaries.
+ *   Adjust blur radius in featherMask() if needed.
  *
  * ============================================================================
  * PERFORMANCE CONSIDERATIONS
@@ -178,6 +178,52 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   }, []);
 
   /**
+   * Apply Gaussian blur to mask for edge feathering.
+   * 
+   * This softens the mask edges for smoother person/background boundaries.
+   * Uses a simple box blur approximation (fast, good enough for edges).
+   * 
+   * @param maskData - Mask ImageData to blur
+   * @param radius - Blur radius (default: 3 pixels for subtle feathering)
+   * @returns New ImageData with blurred mask
+   */
+  const featherMask = useCallback((maskData: ImageData, radius: number = 3): ImageData => {
+    const { width, height, data } = maskData;
+    const blurred = new ImageData(new Uint8ClampedArray(data), width, height);
+    const blurredData = blurred.data;
+
+    // Simple box blur - average pixels in radius
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        let sum = 0;
+        let count = 0;
+
+        for (let dy = -radius; dy <= radius; dy++) {
+          for (let dx = -radius; dx <= radius; dx++) {
+            const nx = x + dx;
+            const ny = y + dy;
+
+            if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+              const idx = (ny * width + nx) * 4;
+              sum += data[idx]; // Use red channel (grayscale mask)
+              count++;
+            }
+          }
+        }
+
+        const idx = (y * width + x) * 4;
+        const avg = sum / count;
+        blurredData[idx] = avg;     // R
+        blurredData[idx + 1] = avg; // G
+        blurredData[idx + 2] = avg; // B
+        blurredData[idx + 3] = 255; // A
+      }
+    }
+
+    return blurred;
+  }, []);
+
+  /**
    * Composite original and filtered frames using segmentation mask.
    *
    * This is the core algorithm that makes the effect work.
@@ -189,6 +235,8 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
    * We want:
    * - Person → original frame (keep in color)
    * - Background → filtered frame (apply grayscale/sepia/etc)
+   * 
+   * Edge feathering is applied to the mask for smoother boundaries.
    */
   const composite = useCallback(
     (result: SegmentationResult, ctx: CanvasRenderingContext2D) => {
@@ -204,12 +252,16 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       // Apply the selected filter to the copy
       applyFilter(filtered, filterType);
 
+      // Feather mask edges for smoother boundaries
+      // Small radius (3px) provides subtle edge softening without halo effect
+      const featheredMask = featherMask(mask, 3);
+
       // Create output buffer
       const output = ctx.createImageData(width, height);
       const outData = output.data;
       const frameData = frame.data;
       const filteredData = filtered.data;
-      const maskData = mask.data;
+      const maskData = featheredMask.data;
 
       /**
        * MediaPipe Selfie Segmentation mask interpretation:
@@ -264,7 +316,7 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       // Draw composited result to canvas
       ctx.putImageData(output, 0, 0);
     },
-    [filterType, maskThreshold]
+    [filterType, maskThreshold, featherMask]
   );
 
   /**
