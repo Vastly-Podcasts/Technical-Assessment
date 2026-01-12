@@ -50,10 +50,13 @@
  *
  */
 
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import ProcessedVideo, { FilterSelector } from './components/ProcessedVideo';
 import { FilterType } from './utils/filters';
 import { videoUrl } from './consts';
+import { isValidVideoFile, isFileSizeValid, MAX_FILE_SIZE } from './utils/videoValidation';
+import { Timeframe, sortTimeframes } from './utils/timeframes';
+import { TimeframeEditor } from './components/TimeframeEditor';
 
 /** Available viewing modes */
 type ViewMode = 'minimal' | 'theater' | 'editor';
@@ -87,6 +90,20 @@ const App: React.FC = () => {
   const [isDragging, setIsDragging] = useState(false);
   const timelineTrackRef = useRef<HTMLDivElement>(null);
 
+  // Video upload state
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [videoDuration, setVideoDuration] = useState<number>(0);
+  const [objectUrl, setObjectUrl] = useState<string | null>(null);
+
+  // Timeframe state
+  const [timeframes, setTimeframes] = useState<Timeframe[]>([]);
+  
+  // Sort timeframes for optimized lookup (sorted by start time)
+  const sortedTimeframes = useMemo(() => {
+    return sortTimeframes(timeframes);
+  }, [timeframes]);
+
   /**
    * Handle filter change from selector.
    * Could be extended to persist preference or sync with backend.
@@ -110,6 +127,115 @@ const App: React.FC = () => {
     e.preventDefault();
     setIsDragging(true);
   }, []);
+
+  /**
+   * Handle file selection for video upload.
+   * Validates file type and size before creating object URL.
+   */
+  const handleFileSelect = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    
+    // User cancelled file selection
+    if (!file) {
+      setUploadError(null);
+      return;
+    }
+
+    // Validate file type
+    if (!isValidVideoFile(file)) {
+      setUploadError("Please select a valid video file (mp4, webm, mov, avi, mkv)");
+      return;
+    }
+
+    // Validate file size
+    if (!isFileSizeValid(file)) {
+      setUploadError(`File too large. Maximum size: ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+      return;
+    }
+
+    // Clear previous error and set new file
+    setUploadError(null);
+    setVideoFile(file);
+  }, []);
+
+  /**
+   * Handle reset button - clear uploaded video and return to default
+   */
+  const handleResetVideo = useCallback(() => {
+    setVideoFile(null);
+    setUploadError(null);
+  }, []);
+
+  /**
+   * Handle video duration change - validate and clamp existing timeframes
+   */
+  const handleDurationChange = useCallback((duration: number) => {
+    setVideoDuration(duration);
+    
+    // Validate and clamp existing timeframes to new duration
+    if (duration > 0 && timeframes.length > 0) {
+      setTimeframes((prev) =>
+        prev
+          .map((tf) => ({
+            ...tf,
+            start: Math.min(tf.start, duration),
+            end: Math.min(tf.end, duration),
+          }))
+          .filter((tf) => tf.start < tf.end) // Remove invalid timeframes
+      );
+    }
+  }, [timeframes]);
+
+  /**
+   * Reset timeframes when video source changes
+   * This ensures timeframes don't persist across different videos
+   */
+  useEffect(() => {
+    setTimeframes([]);
+  }, [objectUrl, videoUrl]);
+
+  /**
+   * Manage object URLs for uploaded video files.
+   * 
+   * Critical cleanup logic:
+   * - Store previous URL before creating new one (prevents race conditions)
+   * - Revoke previous URL AFTER new one is set (ensures ProcessedVideo has new URL)
+   * - Cleanup on unmount or when videoFile becomes null
+   * 
+   * Why this order matters:
+   * - If we revoke before setting new URL, ProcessedVideo might try to use revoked URL
+   * - If we don't revoke previous URL, memory leaks accumulate
+   * - Cleanup function ensures URL is revoked even if component unmounts during file change
+   */
+  useEffect(() => {
+    if (!videoFile) {
+      // Clear object URL when no file selected
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        setObjectUrl(null);
+      }
+      return;
+    }
+
+    // Store previous URL before creating new one
+    const previousUrl = objectUrl;
+
+    // Create new object URL
+    const newUrl = URL.createObjectURL(videoFile);
+    setObjectUrl(newUrl);
+
+    // Revoke previous URL AFTER new one is set (prevents race condition)
+    if (previousUrl) {
+      URL.revokeObjectURL(previousUrl);
+    }
+
+    // Cleanup on unmount or when videoFile becomes null
+    return () => {
+      if (newUrl) {
+        URL.revokeObjectURL(newUrl);
+      }
+    };
+  }, [videoFile]); // Only depend on videoFile, not objectUrl
 
   /**
    * Handle mouse move - update clip position while dragging
@@ -173,10 +299,12 @@ const App: React.FC = () => {
         <div className="video-stage">
           <div className="video-container">
             <ProcessedVideo
-              src={videoUrl}
+              src={objectUrl || videoUrl}
               filterType={filterType}
               maskThreshold={maskThreshold}
               onProcessingChange={handleProcessingChange}
+              onDurationChange={handleDurationChange}
+              activeTimeframes={sortedTimeframes}
             />
           </div>
 
@@ -220,6 +348,78 @@ const App: React.FC = () => {
           />
           <span className="threshold-value">{Math.round(maskThreshold * 100)}%</span>
         </div>
+
+        {/* Video upload control */}
+        <div className="upload-control" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <label
+            htmlFor="video-upload"
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: videoFile ? '#4a5568' : '#4299e1',
+              color: 'white',
+              borderRadius: '0.375rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              textAlign: 'center',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              if (!videoFile) {
+                e.currentTarget.style.backgroundColor = '#3182ce';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!videoFile) {
+                e.currentTarget.style.backgroundColor = '#4299e1';
+              }
+            }}
+          >
+            {videoFile ? videoFile.name : 'Upload Video'}
+          </label>
+          <input
+            id="video-upload"
+            type="file"
+            accept="video/*"
+            onChange={handleFileSelect}
+            style={{ display: 'none' }}
+          />
+          {videoFile && (
+            <button
+              onClick={handleResetVideo}
+              style={{
+                padding: '0.25rem 0.75rem',
+                backgroundColor: '#e53e3e',
+                color: 'white',
+                border: 'none',
+                borderRadius: '0.375rem',
+                cursor: 'pointer',
+                fontSize: '0.75rem',
+              }}
+            >
+              Reset
+            </button>
+          )}
+          {uploadError && (
+            <div
+              style={{
+                color: '#e53e3e',
+                fontSize: '0.75rem',
+                padding: '0.25rem 0.5rem',
+                backgroundColor: '#fed7d7',
+                borderRadius: '0.25rem',
+              }}
+            >
+              {uploadError}
+            </div>
+          )}
+        </div>
+
+        {/* Timeframe Editor */}
+        <TimeframeEditor
+          timeframes={timeframes}
+          onTimeframesChange={setTimeframes}
+          videoDuration={videoDuration}
+        />
       </div>
     </div>
   );

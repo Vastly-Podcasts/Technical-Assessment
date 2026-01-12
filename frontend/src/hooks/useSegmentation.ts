@@ -78,6 +78,8 @@ export interface SegmentationResult {
   /** Frame dimensions for convenience */
   width: number;
   height: number;
+  /** Timestamp when this frame was captured (video.currentTime) */
+  timestamp: number;
 }
 
 /** Configuration options for the segmentation hook */
@@ -131,6 +133,7 @@ export function useSegmentation(config: SegmentationConfig = {}) {
   const isModelLoadedRef = useRef(false); // Ref to avoid stale closure in processFrame
   const isProcessingRef = useRef(false); // Track if we're currently processing a frame
   const lastFrameTimeRef = useRef<number>(0); // Track frame timing for skipping
+  const frameTimestampRef = useRef<number>(0); // Track timestamp when frame was captured
 
   /**
    * Initialize MediaPipe model (lazy - only when needed)
@@ -175,6 +178,7 @@ export function useSegmentation(config: SegmentationConfig = {}) {
         mask,
         width: canvas.width,
         height: canvas.height,
+        timestamp: frameTimestampRef.current, // Include captured timestamp
       });
     });
 
@@ -261,6 +265,10 @@ export function useSegmentation(config: SegmentationConfig = {}) {
       // Mark as processing
       isProcessingRef.current = true;
       lastFrameTimeRef.current = now;
+
+      // Capture timestamp when frame is sent (fixes race condition where video
+      // advances between frame capture and processing)
+      frameTimestampRef.current = video.currentTime;
 
       // Send frame to MediaPipe for segmentation (non-blocking)
       // Results come back via onResults callback (set up in initializeModel)

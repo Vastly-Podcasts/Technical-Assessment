@@ -58,6 +58,7 @@
 import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useSegmentation, SegmentationResult } from '../hooks/useSegmentation';
 import { applyFilter, FilterType, FILTER_INFO } from '../utils/filters';
+import { Timeframe, isTimeframeActive } from '../utils/timeframes';
 
 interface ProcessedVideoProps {
   /** Video source URL */
@@ -73,6 +74,10 @@ interface ProcessedVideoProps {
   maskThreshold?: number;
   /** Callback when video metadata loads */
   onLoadedMetadata?: () => void;
+  /** Callback when video duration is available */
+  onDurationChange?: (duration: number) => void;
+  /** Timeframes when filter should be active (empty = always active) */
+  activeTimeframes?: Timeframe[];
   /** Callback when processing state changes */
   onProcessingChange?: (isProcessing: boolean) => void;
   /** Callback when backend status changes */
@@ -90,12 +95,17 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   filterType = 'grayscale',
   maskThreshold = 0.5,
   onLoadedMetadata,
+  onDurationChange,
+  activeTimeframes = [],
   onProcessingChange,
   onBackendStatusChange,
 }) => {
   // Refs for DOM elements
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  
+  // Ref for timeframes to avoid stale closure in composite callback
+  const timeframesRef = useRef<Timeframe[]>([]);
 
   // Local state
   const [isVideoReady, setIsVideoReady] = useState(false);
@@ -244,10 +254,36 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
    * - Background → filtered frame (apply grayscale/sepia/etc)
    * 
    * Edge feathering is applied to the mask for smoother boundaries.
+   * 
+   * Timeframe support: Filter only applies during active timeframes.
+   * If not in an active timeframe, show original frame without filtering.
    */
   const composite = useCallback(
     (result: SegmentationResult, ctx: CanvasRenderingContext2D) => {
-      const { frame, mask, width, height } = result;
+      const { frame, mask, width, height, timestamp } = result;
+      const video = videoRef.current;
+      
+      // Check if filter should be active based on timeframes
+      let shouldApplyFilter = true;
+      if (timeframesRef.current.length > 0 && video) {
+        // Use timestamp from result (captured when frame was sent) to avoid race condition
+        const frameTime = timestamp ?? video.currentTime;
+        
+        // Handle video looping: use modulo arithmetic if video loops
+        const videoDuration = video.duration || Infinity;
+        const loopTime = videoDuration > 0 && video.loop 
+          ? frameTime % videoDuration 
+          : frameTime;
+        
+        // Check if we're in an active timeframe
+        shouldApplyFilter = isTimeframeActive(loopTime, timeframesRef.current);
+      }
+      
+      // If not in active timeframe, show original frame without filtering
+      if (!shouldApplyFilter) {
+        ctx.putImageData(frame, 0, 0);
+        return;
+      }
 
       // Create a copy for filtered version (don't modify original)
       const filtered = new ImageData(
@@ -349,6 +385,11 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     },
     [filterType, maskThreshold, featherMask]
   );
+  
+  // Update timeframes ref when prop changes (avoids stale closure)
+  useEffect(() => {
+    timeframesRef.current = activeTimeframes ?? [];
+  }, [activeTimeframes]);
 
   /**
    * Reset video ready state when src changes
@@ -372,10 +413,15 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     });
     setIsVideoReady(true);
     onLoadedMetadata?.();
-  }, [onLoadedMetadata]);
+    // Notify parent of video duration for timeframe validation
+    if (video.duration && isFinite(video.duration)) {
+      onDurationChange?.(video.duration);
+    }
+  }, [onLoadedMetadata, onDurationChange]);
 
   /**
    * Start processing when video is ready
+   * Restart segmentation when timeframes change to ensure callback updates
    */
   useEffect(() => {
     const video = videoRef.current;
@@ -390,6 +436,9 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Stop any existing segmentation before starting new one
+    stopSegmentation();
+
     // Start segmentation and provide compositing callback
     startSegmentation(video, (result) => {
       composite(result, ctx);
@@ -399,7 +448,12 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     return () => {
       stopSegmentation();
     };
-  }, [isVideoReady, videoDimensions, startSegmentation, stopSegmentation, composite]);
+  }, [isVideoReady, videoDimensions, activeTimeframes, startSegmentation, stopSegmentation, composite]);
+
+  // Detect if URL is object URL (blob:) vs external URL
+  // Object URLs don't need crossOrigin attribute (can cause CORS errors)
+  // External URLs need crossOrigin="anonymous" for MediaPipe canvas operations
+  const isObjectUrl = src.startsWith('blob:');
 
   return (
     <div className="processed-video-container" style={{ position: 'relative' }}>
@@ -412,7 +466,7 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
         ref={videoRef}
         src={src}
         onLoadedMetadata={handleLoadedMetadata}
-        crossOrigin="anonymous"
+        crossOrigin={isObjectUrl ? undefined : "anonymous"}
         autoPlay
         playsInline
         loop
