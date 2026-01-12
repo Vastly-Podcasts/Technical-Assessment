@@ -168,12 +168,16 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   }, [isVideoReady]);
 
   /**
-   * Handle click to play video when autoplay is blocked
+   * Handle play/pause toggle
    */
-  const handlePlayClick = useCallback(() => {
+  const handlePlayPause = useCallback(() => {
     const video = videoRef.current;
-    if (video && video.paused) {
+    if (!video) return;
+
+    if (video.paused) {
       video.play().catch(console.error);
+    } else {
+      video.pause();
     }
   }, []);
 
@@ -390,42 +394,58 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       <canvas
         ref={canvasRef}
         className="processed-video-canvas"
-        onClick={handlePlayClick}
         style={{
           maxWidth: '100%',
           height: 'auto',
           display: isVideoReady ? 'block' : 'none',
-          cursor: !isVideoPlaying ? 'pointer' : 'default',
         }}
       />
 
-      {/* Click to play overlay - shown when video is paused */}
-      {isVideoReady && !isVideoPlaying && isModelLoaded && (
-        <div
-          className="play-overlay"
-          onClick={handlePlayClick}
+      {/* Play/Pause control button - always visible when video is ready */}
+      {isVideoReady && isModelLoaded && (
+        <button
+          className="video-control-button"
+          onClick={handlePlayPause}
+          aria-label={isVideoPlaying ? 'Pause video' : 'Play video'}
           style={{
             position: 'absolute',
-            top: '50%',
+            bottom: '16px',
             left: '50%',
-            transform: 'translate(-50%, -50%)',
+            transform: 'translateX(-50%)',
             cursor: 'pointer',
-            background: 'rgba(29, 29, 31, 0.7)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
+            background: 'rgba(29, 29, 31, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: 'none',
             borderRadius: '50%',
-            width: '64px',
-            height: '64px',
+            width: '56px',
+            height: '56px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            transition: 'transform 0.15s ease',
+            transition: 'all 0.2s ease',
+            zIndex: 10,
+            padding: 0,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(29, 29, 31, 0.95)';
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(29, 29, 31, 0.85)';
+            e.currentTarget.style.transform = 'translateX(-50%) scale(1)';
           }}
         >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)">
-            <path d="M8 5v14l11-7z"/>
-          </svg>
-        </div>
+          {isVideoPlaying ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.95)">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+          ) : (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="rgba(255,255,255,0.95)" style={{ marginLeft: '2px' }}>
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          )}
+        </button>
       )}
 
       {/* Loading state */}
@@ -435,7 +455,7 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
 
       {/* Model loading indicator */}
       {isVideoReady && !isModelLoaded && (
-        <div className="model-loading" onClick={handlePlayClick} style={{ cursor: 'pointer' }}>
+        <div className="model-loading" onClick={handlePlayPause} style={{ cursor: 'pointer' }}>
           <div style={{ fontWeight: 500 }}>Loading AI model...</div>
           <div style={{ fontSize: '13px', marginTop: '8px', color: '#aeaeb2' }}>
             Click here if video doesn't start automatically
