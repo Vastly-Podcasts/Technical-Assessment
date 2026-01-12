@@ -292,6 +292,11 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       const transitionLow = threshold255 * 0.5;  // Start of transition
       const transitionHigh = Math.min(255, threshold255 * 1.5);  // End of transition (clamped to 255)
 
+      // Safety check: if transition region is too narrow or zero, use binary threshold
+      // This prevents division by zero and handles edge cases at threshold extremes
+      const transitionRange = transitionHigh - transitionLow;
+      const useBinaryThreshold = transitionRange < 1.0; // Less than 1 pixel difference
+
       // Smoothstep helper: smooth S-curve interpolation
       const smoothstep = (t: number): number => {
         // Clamp t to [0, 1]
@@ -308,18 +313,27 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
         // maskValue < transitionLow → blendFactor ≈ 0 (background)
         // maskValue > transitionHigh → blendFactor ≈ 1 (person)
         // Between → smooth curve
-        let normalizedValue: number;
-        if (maskValue <= transitionLow) {
-          normalizedValue = 0;
-        } else if (maskValue >= transitionHigh) {
-          normalizedValue = 1;
+        let blendFactor: number;
+        
+        if (useBinaryThreshold) {
+          // Binary threshold when transition region is too narrow
+          // Use threshold255 as the cutoff point
+          blendFactor = maskValue >= threshold255 ? 1 : 0;
         } else {
-          // Normalize to [0, 1] within transition region
-          normalizedValue = (maskValue - transitionLow) / (transitionHigh - transitionLow);
-        }
+          let normalizedValue: number;
+          if (maskValue <= transitionLow) {
+            normalizedValue = 0;
+          } else if (maskValue >= transitionHigh) {
+            normalizedValue = 1;
+          } else {
+            // Normalize to [0, 1] within transition region
+            // Safety check: transitionRange is guaranteed > 1.0 here
+            normalizedValue = (maskValue - transitionLow) / transitionRange;
+          }
 
-        // Apply smoothstep for smoother curve
-        const blendFactor = smoothstep(normalizedValue);
+          // Apply smoothstep for smoother curve
+          blendFactor = smoothstep(normalizedValue);
+        }
 
         // Blend: output = original * blend + filtered * (1 - blend)
         // blendFactor = 1 → original (person)
