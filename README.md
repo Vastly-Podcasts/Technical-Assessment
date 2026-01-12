@@ -1,118 +1,116 @@
-# Face Detection Technical Assessment
+# Video Background Filter
 
-A full-stack application for implementing face detection on video content, designed as a technical assessment platform.
+A real-time video processing application that applies visual filters to video backgrounds while preserving the person/speaker in full color. Uses MediaPipe for GPU-accelerated person segmentation.
+
+## Features
+
+- **Real-time person segmentation** via MediaPipe SelfieSegmentation
+- **Background filters**: Grayscale, Sepia, Blur (GPU-accelerated), None
+- **Adjustable sensitivity** for person/background boundary detection
+- **Video upload** with type/size validation (mp4, webm, mov, avi, mkv)
+- **Timeframe-based filter control** - apply filters to specific time ranges
+- **Three viewing modes**: Minimal, Theater, Editor
 
 ## Project Structure
 
-This repository contains two main components:
-
-### Backend (`/app`)
-- **Technology**: Python Flask/FastAPI
-- **Purpose**: Provides API endpoints for face detection processing
-- **Key Files**:
-  - `main.py` - Main application entry point
-  - `helpers.py` - Utility functions and helpers
-  - `requirements.txt` - Python dependencies
-
-### Frontend (`/frontend`)
-- **Technology**: React with TypeScript
-- **Purpose**: User interface for video playback and face detection visualization
-- **Key Files**:
-  - `src/App.tsx` - Main React component
-  - `src/components/` - Reusable UI components
-  - `src/consts.ts` - Configuration constants (video URL)
+```
+├── frontend/               # React + TypeScript application
+│   ├── src/
+│   │   ├── App.tsx         # Main application component
+│   │   ├── components/
+│   │   │   ├── ProcessedVideo.tsx    # Video + segmentation + compositing
+│   │   │   ├── TimeframeEditor.tsx   # Timeframe management UI
+│   │   │   └── ErrorBoundary.tsx     # Error handling
+│   │   ├── utils/
+│   │   │   ├── filters.ts        # Filter implementations (grayscale, sepia, blur)
+│   │   │   ├── timeframes.ts     # Timeframe validation and lookup
+│   │   │   └── videoValidation.ts # File type/size validation
+│   │   └── consts.ts       # Default video URL configuration
+│   └── package.json
+└── requirements.txt        # Python dependencies (backend placeholder)
+```
 
 ## Getting Started
 
 ### Prerequisites
-- Python 3.8+
+
 - Node.js 16+
 - npm or yarn
 
-### Backend Setup
+### Installation
 
-1. Navigate to the project root directory
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+cd frontend
+npm install
+```
 
-3. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Running the Application
 
-4. Start the backend server:
-   ```bash
-   python app/main.py
-   ```
+```bash
+npm start
+```
 
-The backend will run on `http://127.0.0.1:8080`
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install Node.js dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the React development server:
-   ```bash
-   npm start
-   ```
-
-The frontend will run on `http://localhost:3000`
-
-## API Endpoints
-
-### Backend Routes
-- `GET /hello-world` - Test endpoint to verify backend connectivity
-- Additional endpoints can be added for face detection processing
+The application runs at `http://localhost:3000`
 
 ## Usage
 
-1. Start both the backend and frontend servers
-2. Open your browser to `http://localhost:3000`
-3. The video will be displayed and ready for face detection
-4. Click "Ping Backend" to test the connection between frontend and backend
-5. Implement face detection logic in the backend and connect it to the frontend
+1. **View video** - Default sample video loads automatically
+2. **Upload custom video** - Click "Upload Video" to use your own video
+3. **Select filter** - Choose Grayscale, Sepia, Blur, or None
+4. **Adjust sensitivity** - Slider controls person/background boundary detection
+5. **Add timeframes** - Define specific time ranges where filters should apply
+6. **Switch view modes** - Minimal (clean), Theater (focused), Editor (timeline)
 
-## Development Notes
+## Technical Implementation
 
-### For Assessment Takers
-- The main task is to implement face detection functionality
-- Backend: Add face detection processing endpoints in `app/main.py`
-- Frontend: Connect to your backend endpoints from `src/App.tsx`
-- The video URL is configured in `frontend/src/consts.ts`
+### Segmentation Pipeline
 
-### Project Configuration
-- Video source is configured in `frontend/src/consts.ts`
-- Backend port is set to 8080 by default
-- Frontend development server runs on port 3000
+1. MediaPipe SelfieSegmentation generates per-pixel mask
+2. Mask threshold determines person vs. background classification
+3. Background pixels receive filter transformation
+4. Person pixels remain in original color
+5. Composited frame renders to canvas at video framerate
 
-## Technologies Used
+### Filter Performance
 
-- **Backend**: Python, Flask/FastAPI
-- **Frontend**: React, TypeScript, HTML5 Video
-- **Styling**: CSS3 with modern responsive design
-- **Development**: Hot reload for both frontend and backend
+- **Grayscale/Sepia**: CPU pixel manipulation (luminosity formula)
+- **Blur**: GPU-accelerated via canvas `filter` API (20-40x faster than CPU)
+- Targets 30fps+ on modern hardware at 1080p
 
-## Contributing
+### Timeframe System
 
-1. Fork the repository
-2. Create a feature branch
-3. Implement your changes
-4. Test both backend and frontend
-5. Submit a pull request
+- Sorted array for O(log n) lookup during playback
+- Binary search finds active timeframe at current timestamp
+- Filters dynamically enable/disable based on video position
+
+## Technologies
+
+- **React 18** + TypeScript
+- **MediaPipe SelfieSegmentation** - real-time person segmentation
+- **Canvas API** - video compositing and GPU-accelerated filters
+- **Tailwind CSS** - styling
+
+## Extending
+
+### Adding New Filters
+
+1. Create filter function in `frontend/src/utils/filters.ts`:
+   ```ts
+   export function applyMyFilter(imageData: ImageData): void {
+     // Modify imageData.data in-place (RGBA format)
+   }
+   ```
+2. Add to `FILTERS` object and `FilterType` union
+3. Add metadata to `FILTER_INFO` array - UI auto-updates
+
+### Video Export (Future)
+
+```ts
+// MediaRecorder API with canvas stream
+const stream = canvas.captureStream(30);
+const recorder = new MediaRecorder(stream);
+```
 
 ## License
 
-This project is designed for technical assessment purposes.
-
-You may use any tool you wish but you are responsible for understanding all parts of the implementation.
+Technical assessment project.
