@@ -270,43 +270,53 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       /**
        * MediaPipe Selfie Segmentation mask interpretation:
        * 
-       * According to official MediaPipe docs, the mask values are:
+       * Mask values are 0-255 where:
        * - HIGH values (255) = Person/foreground probability
        * - LOW values (0) = Background probability
        * 
-       * However, when we draw the mask to canvas and read it back via getImageData,
-       * the rendering might affect values. The mask is a grayscale image.
+       * We use a smooth transition curve to map mask values to blend factors.
+       * The threshold parameter controls where the transition occurs.
        * 
-       * Key: We want PERSON = original (color), BACKGROUND = filtered (grayscale)
-       * 
-       * If mask HIGH = person: blendFactor should be HIGH when mask is HIGH
-       * If mask LOW = person: blendFactor should be HIGH when mask is LOW
+       * Smoothstep function provides a smooth S-curve transition:
+       * - Below threshold*0.5: mostly background (filtered)
+       * - Above threshold*1.5: mostly person (original)
+       * - Between: smooth blend
        */
 
-      // Use the threshold (0-1 scale, convert to 0-255)
+      // Convert threshold to 0-255 scale
       const threshold255 = maskThreshold * 255;
+      // Define transition region (wider = smoother, narrower = sharper)
+      const transitionLow = threshold255 * 0.5;  // Start of transition
+      const transitionHigh = Math.min(255, threshold255 * 1.5);  // End of transition (clamped to 255)
+
+      // Smoothstep helper: smooth S-curve interpolation
+      const smoothstep = (t: number): number => {
+        // Clamp t to [0, 1]
+        t = Math.max(0, Math.min(1, t));
+        // Smoothstep: 3t² - 2t³
+        return t * t * (3 - 2 * t);
+      };
 
       for (let i = 0; i < frameData.length; i += 4) {
         // Get mask value (0-255)
         const maskValue = maskData[i];
 
-        // STANDARD interpretation: HIGH mask = person, LOW mask = background
-        // blendFactor = 1 → use original (person)
-        // blendFactor = 0 → use filtered (background)
-        let blendFactor: number;
-        
-        if (maskValue >= threshold255) {
-          // HIGH mask = person → use original
-          blendFactor = 1;
-        } else if (maskValue <= threshold255 * 0.3) {
-          // LOW mask = definite background → use filtered
-          blendFactor = 0;
+        // Map mask value to blend factor using smooth transition
+        // maskValue < transitionLow → blendFactor ≈ 0 (background)
+        // maskValue > transitionHigh → blendFactor ≈ 1 (person)
+        // Between → smooth curve
+        let normalizedValue: number;
+        if (maskValue <= transitionLow) {
+          normalizedValue = 0;
+        } else if (maskValue >= transitionHigh) {
+          normalizedValue = 1;
         } else {
-          // Edge region - smooth blend
-          // Map from [threshold*0.3, threshold] to [0, 1]
-          const edgeLow = threshold255 * 0.3;
-          blendFactor = (maskValue - edgeLow) / (threshold255 - edgeLow);
+          // Normalize to [0, 1] within transition region
+          normalizedValue = (maskValue - transitionLow) / (transitionHigh - transitionLow);
         }
+
+        // Apply smoothstep for smoother curve
+        const blendFactor = smoothstep(normalizedValue);
 
         // Blend: output = original * blend + filtered * (1 - blend)
         // blendFactor = 1 → original (person)
