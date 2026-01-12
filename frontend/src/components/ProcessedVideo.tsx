@@ -432,7 +432,7 @@ export const FilterSelector: React.FC<{
 }> = ({ value, onChange }) => {
   return (
     <div className="filter-selector">
-      <label htmlFor="filter-select">Background Filter:</label>
+      <label htmlFor="filter-select">Effect</label>
       <select
         id="filter-select"
         value={value}
@@ -441,7 +441,7 @@ export const FilterSelector: React.FC<{
       >
         {FILTER_INFO.map((filter) => (
           <option key={filter.id} value={filter.id}>
-            {filter.name} - {filter.description}
+            {filter.name}
           </option>
         ))}
       </select>

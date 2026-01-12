@@ -55,6 +55,16 @@ import ProcessedVideo, { FilterSelector } from './components/ProcessedVideo';
 import { FilterType } from './utils/filters';
 import { videoUrl } from './consts';
 
+/** Available viewing modes */
+type ViewMode = 'minimal' | 'theater' | 'window' | 'editor';
+
+const VIEW_MODES: { id: ViewMode; label: string; icon: string }[] = [
+  { id: 'minimal', label: 'Minimal', icon: '○' },
+  { id: 'theater', label: 'Theater', icon: '▮' },
+  { id: 'window', label: 'Window', icon: '⊞' },
+  { id: 'editor', label: 'Editor', icon: '◫' },
+];
+
 /**
  * Main application component.
  *
@@ -67,10 +77,10 @@ const App: React.FC = () => {
   // Processing state for UI feedback
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Mask threshold - controls person/background boundary  
-  // Higher threshold = more strict (fewer pixels as person, more as background)
-  // Lower threshold = more liberal (more pixels as person)
-  // User can adjust via slider
+  // Viewing mode
+  const [viewMode, setViewMode] = useState<ViewMode>('minimal');
+
+  // Mask threshold - controls person/background boundary
   const [maskThreshold, setMaskThreshold] = useState(0.7);
 
   /**
@@ -90,19 +100,43 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="container">
-      {/* Header */}
-      <header className="header">
-        <h1>Video Background Filter</h1>
-        <p className="subtitle">
-          Real-time person segmentation with selective background effects
-        </p>
-      </header>
+    <div className={`app-container mode-${viewMode}`}>
+      {/* Mode selector - floating top right */}
+      <div className="mode-selector">
+        {VIEW_MODES.map((mode) => (
+          <button
+            key={mode.id}
+            className={`mode-btn ${viewMode === mode.id ? 'active' : ''}`}
+            onClick={() => setViewMode(mode.id)}
+            title={mode.label}
+          >
+            <span className="mode-icon">{mode.icon}</span>
+            <span className="mode-label">{mode.label}</span>
+          </button>
+        ))}
+      </div>
 
-      {/* Main content */}
-      <main>
+      {/* Main viewport */}
+      <div className="viewport">
+        {/* Window frame (only visible in window mode) */}
+        {viewMode === 'window' && (
+          <div className="window-frame">
+            <div className="window-sill" />
+          </div>
+        )}
+
+        {/* Editor timeline bar (only visible in editor mode) */}
+        {viewMode === 'editor' && (
+          <div className="editor-header">
+            <div className="editor-title">Preview</div>
+            <div className="editor-controls">
+              <span className="editor-timecode">00:00:00</span>
+            </div>
+          </div>
+        )}
+
         {/* Video display */}
-        <div className="video-section">
+        <div className="video-stage">
           <div className="video-container">
             <ProcessedVideo
               src={videoUrl}
@@ -112,57 +146,44 @@ const App: React.FC = () => {
             />
           </div>
 
-          {/* Processing indicator */}
+          {/* Live indicator - repositioned for theater/editor */}
           {isProcessing && (
             <div className="processing-indicator">
               <span className="pulse-dot" />
-              Processing in real-time
+              Live
             </div>
           )}
         </div>
 
-        {/* Controls */}
-        <div className="controls-section">
-          <FilterSelector value={filterType} onChange={handleFilterChange} />
-          
-          {/* Threshold slider for tuning */}
-          <div className="threshold-control" style={{ 
-            padding: '12px 20px',
-            background: 'white',
-            borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px'
-          }}>
-            <label htmlFor="threshold-slider" style={{ fontWeight: 500, color: '#333' }}>
-              Mask Threshold:
-            </label>
-            <input 
-              id="threshold-slider"
-              type="range" 
-              min="0" 
-              max="1" 
-              step="0.05"
-              value={maskThreshold}
-              onChange={(e) => setMaskThreshold(parseFloat(e.target.value))}
-              style={{ width: '150px' }}
-            />
-            <span style={{ minWidth: '40px', color: '#666' }}>{maskThreshold.toFixed(2)}</span>
+        {/* Editor timeline (only visible in editor mode) */}
+        {viewMode === 'editor' && (
+          <div className="editor-timeline">
+            <div className="timeline-track">
+              <div className="timeline-clip" />
+            </div>
+            <div className="timeline-scrubber" />
           </div>
-        </div>
+        )}
+      </div>
 
-        {/* Info panel */}
-        <div className="info-panel">
-          <h3>How it works</h3>
-          <ol>
-            <li>MediaPipe AI identifies the person in each video frame</li>
-            <li>A segmentation mask separates person from background</li>
-            <li>The selected filter is applied to background pixels only</li>
-            <li>The composited result displays in real-time</li>
-          </ol>
+      {/* Controls bar */}
+      <div className="controls-section">
+        <FilterSelector value={filterType} onChange={handleFilterChange} />
+
+        <div className="threshold-control">
+          <label htmlFor="threshold-slider">Sensitivity</label>
+          <input
+            id="threshold-slider"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            value={maskThreshold}
+            onChange={(e) => setMaskThreshold(parseFloat(e.target.value))}
+          />
+          <span className="threshold-value">{Math.round(maskThreshold * 100)}%</span>
         </div>
-      </main>
+      </div>
     </div>
   );
 };
