@@ -206,6 +206,8 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     const sourceCanvas = tempCanvas1Ref.current;
     const destCanvas = tempCanvas2Ref.current;
     
+    if (!sourceCanvas || !destCanvas) return maskData; // Fallback if canvas unavailable
+    
     sourceCanvas.width = width;
     sourceCanvas.height = height;
     destCanvas.width = width;
