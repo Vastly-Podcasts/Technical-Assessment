@@ -282,7 +282,7 @@ export function useSegmentation(config: SegmentationConfig = {}) {
 
     // Start the loop
     animationFrameRef.current = requestAnimationFrame(processFrame);
-  }, [initializeModel, isModelLoaded]);
+  }, [initializeModel]);
 
   /**
    * Stop processing and cleanup resources
