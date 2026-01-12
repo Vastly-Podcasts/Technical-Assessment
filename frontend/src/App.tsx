@@ -1,60 +1,142 @@
-import React, { useRef, useState } from 'react';
-import VideoPlayer from './components/VideoPlayer';
+/**
+ * App.tsx
+ *
+ * Main application component for the Video Background Filter demo.
+ *
+ * ============================================================================
+ * WHAT THIS APP DOES
+ * ============================================================================
+ *
+ * Applies a visual filter to the background of a video while keeping
+ * the speaker/person in full color. Uses MediaPipe for real-time
+ * person segmentation.
+ *
+ * ============================================================================
+ * COMPONENT ARCHITECTURE
+ * ============================================================================
+ *
+ * App
+ * ├── ProcessedVideo     ← Main video display with segmentation
+ * │   ├── useSegmentation hook (MediaPipe)
+ * │   └── Canvas compositing
+ * └── FilterSelector     ← UI control for filter selection
+ *
+ * State lives in App, passed down to children.
+ * ProcessedVideo handles all video/canvas/segmentation logic internally.
+ *
+ * ============================================================================
+ * FOR FUTURE DEVELOPERS
+ * ============================================================================
+ *
+ * To add new features:
+ *
+ * 1. NEW FILTER: Add to utils/filters.ts, it will appear in selector
+ *
+ * 2. VIDEO UPLOAD: Replace hardcoded videoUrl with file input
+ *    - Add input[type=file] with accept="video/*"
+ *    - Create object URL: URL.createObjectURL(file)
+ *    - Pass to ProcessedVideo src prop
+ *    - Remember to revoke URL on cleanup
+ *
+ * 3. TIMELINE CONTROLS: Seek to specific timestamps
+ *    - ProcessedVideo exposes video ref internally
+ *    - Add prop for external control, or lift video ref up
+ *    - Use video.currentTime = seconds to seek
+ *
+ * 4. EXPORT: Save processed video
+ *    - Use MediaRecorder API to capture canvas stream
+ *    - canvas.captureStream(30) gives you MediaStream
+ *    - Record chunks, create blob, download
+ *
+ */
+
+import React, { useState, useCallback } from 'react';
+import ProcessedVideo, { FilterSelector } from './components/ProcessedVideo';
+import { FilterType } from './utils/filters';
 import { videoUrl } from './consts';
 
-export interface FaceDetection {
-    id: string;
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-    confidence: number;
-    label?: string;
-  }
-
+/**
+ * Main application component.
+ *
+ * Renders the processed video with filter controls.
+ */
 const App: React.FC = () => {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [response, setResponse] = useState<string>('');
+  // Current filter selection - defaults to grayscale per assessment example
+  const [filterType, setFilterType] = useState<FilterType>('grayscale');
 
-  const pingBackend = async () => {
-    try {
-      const res = await fetch('http://127.0.0.1:8080/hello-world');
-      const data = await res.text();
-      setResponse(data);
-      console.log('Backend response:', data);
-    } catch (error) {
-      console.error('Error pinging backend:', error);
-      setResponse('Error connecting to backend');
-    }
-  };
+  // Processing state for UI feedback
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  // Mask threshold - could be exposed via slider for advanced users
+  // Lower = more pixels treated as person, Higher = stricter boundary
+  const [maskThreshold] = useState(0.5);
+
+  /**
+   * Handle filter change from selector.
+   * Could be extended to persist preference or sync with backend.
+   */
+  const handleFilterChange = useCallback((newFilter: FilterType) => {
+    setFilterType(newFilter);
+  }, []);
+
+  /**
+   * Handle processing state changes.
+   * Useful for showing loading spinners, disabling controls, etc.
+   */
+  const handleProcessingChange = useCallback((processing: boolean) => {
+    setIsProcessing(processing);
+  }, []);
 
   return (
     <div className="container">
-      <div style={{ textAlign: 'center' }}>
-        <div className="video-container">
-          <VideoPlayer
-            ref={videoRef}
-            src={videoUrl}
-            onLoadedMetadata={() => console.log('Video loaded')}
-          />
-        </div>
-        
-        <div style={{ marginTop: '20px' }}>
-          <button 
-            onClick={pingBackend}
-            className="btn btn-primary"
-          >
-            Ping Backend
-          </button>
-          {response && (
-            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
-              Response: {response}
+      {/* Header */}
+      <header className="header">
+        <h1>Video Background Filter</h1>
+        <p className="subtitle">
+          Real-time person segmentation with selective background effects
+        </p>
+      </header>
+
+      {/* Main content */}
+      <main>
+        {/* Video display */}
+        <div className="video-section">
+          <div className="video-container">
+            <ProcessedVideo
+              src={videoUrl}
+              filterType={filterType}
+              maskThreshold={maskThreshold}
+              onProcessingChange={handleProcessingChange}
+            />
+          </div>
+
+          {/* Processing indicator */}
+          {isProcessing && (
+            <div className="processing-indicator">
+              <span className="pulse-dot" />
+              Processing in real-time
             </div>
           )}
         </div>
-      </div>
+
+        {/* Controls */}
+        <div className="controls-section">
+          <FilterSelector value={filterType} onChange={handleFilterChange} />
+        </div>
+
+        {/* Info panel */}
+        <div className="info-panel">
+          <h3>How it works</h3>
+          <ol>
+            <li>MediaPipe AI identifies the person in each video frame</li>
+            <li>A segmentation mask separates person from background</li>
+            <li>The selected filter is applied to background pixels only</li>
+            <li>The composited result displays in real-time</li>
+          </ol>
+        </div>
+      </main>
     </div>
   );
 };
 
-export default App; 
+export default App;
