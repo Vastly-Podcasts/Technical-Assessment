@@ -59,6 +59,8 @@ import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useSegmentation, SegmentationResult } from '../hooks/useSegmentation';
 import { applyFilter, FilterType, FILTER_INFO } from '../utils/filters';
 import { Timeframe, isTimeframeActive } from '../utils/timeframes';
+import { apiGet } from '../utils/api';
+import { API_ENDPOINTS, HEALTH_CHECK_INTERVAL } from '../utils/config';
 
 interface ProcessedVideoProps {
   /** Video source URL */
@@ -117,27 +119,46 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   const { startSegmentation, stopSegmentation, isProcessing, isModelLoaded } =
     useSegmentation({ modelSelection: 0 });
 
-  // Check backend health on mount
+  // Check backend health on mount with exponential backoff
   useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    let retryCount = 0;
+    const maxRetries = 5;
+    const baseInterval = HEALTH_CHECK_INTERVAL;
+
     const checkBackend = async () => {
       try {
-        const response = await fetch('http://localhost:8080/api/health');
-        if (response.ok) {
-          setBackendStatus('connected');
-          onBackendStatusChange?.(true);
-        } else {
-          setBackendStatus('disconnected');
-          onBackendStatusChange?.(false);
-        }
-      } catch {
+        await apiGet(API_ENDPOINTS.HEALTH, {
+          timeout: 5000, // 5 second timeout for health checks
+          maxRetries: 0, // No retries for health checks (we'll retry the check itself)
+        });
+        
+        setBackendStatus('connected');
+        onBackendStatusChange?.(true);
+        retryCount = 0; // Reset retry count on success
+      } catch (error) {
         setBackendStatus('disconnected');
         onBackendStatusChange?.(false);
+        retryCount++;
+        
+        // Exponential backoff: increase interval up to 5 minutes
+        if (retryCount < maxRetries) {
+          const backoffInterval = Math.min(baseInterval * Math.pow(2, retryCount), 300000);
+          if (intervalId) clearInterval(intervalId);
+          intervalId = setTimeout(checkBackend, backoffInterval);
+        }
       }
     };
+
+    // Initial check
     checkBackend();
-    // Periodically check backend status
-    const interval = setInterval(checkBackend, 10000);
-    return () => clearInterval(interval);
+    
+    // Set up periodic checks with base interval
+    intervalId = setInterval(checkBackend, baseInterval);
+    
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
   }, [onBackendStatusChange]);
 
   // Notify parent of processing state changes
@@ -171,9 +192,14 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     if (!isVideoReady || !video) return;
 
     // Try to start playback
-    video.play().catch(() => {
+    video.play().catch((error) => {
       // Autoplay blocked - user needs to click to start
-      console.log('Autoplay blocked, click to play');
+      // Silently handle autoplay restrictions (browser policy)
+      // Error is expected and doesn't need user notification
+      if (process.env.NODE_ENV === 'development') {
+        // Only log in development for debugging
+        console.debug('Autoplay blocked, click to play:', error);
+      }
     });
   }, [isVideoReady]);
 
@@ -185,7 +211,13 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
     if (!video) return;
 
     if (video.paused) {
-      video.play().catch(console.error);
+      video.play().catch((error) => {
+        // Handle play errors gracefully
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Failed to play video:', error);
+        }
+        // In production, silently handle - user can try again
+      });
     } else {
       video.pause();
     }

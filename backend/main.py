@@ -77,9 +77,23 @@ from werkzeug.utils import secure_filename
 from helpers import *
 
 app = Flask(__name__)
-cors = CORS(app)
 
 load_dotenv()
+
+# CORS configuration - restrict to specific origins for security
+# In production, set ALLOWED_ORIGINS environment variable (comma-separated)
+# Example: ALLOWED_ORIGINS=http://localhost:3000,https://example.com
+# If not set, defaults to allowing localhost:3000 for development
+allowed_origins = os.getenv('ALLOWED_ORIGINS', 'http://localhost:3000').split(',')
+allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
+
+cors = CORS(
+    app,
+    origins=allowed_origins,
+    methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allow_headers=['Content-Type', 'Authorization'],
+    supports_credentials=True
+)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -343,4 +357,16 @@ def get_job_status(job_id):
 # =============================================================================
 
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=8080, debug=True, use_reloader=False)
+    # Debug mode should be disabled in production
+    # Set FLASK_DEBUG=false or FLASK_ENV=production to disable
+    debug_mode = os.getenv('FLASK_DEBUG', 'false').lower() == 'true'
+    flask_env = os.getenv('FLASK_ENV', 'development').lower()
+    
+    # Disable debug in production environment
+    if flask_env == 'production':
+        debug_mode = False
+    
+    # Get port from environment or default to 8080
+    port = int(os.getenv('PORT', '8080'))
+    
+    app.run(host='0.0.0.0', port=port, debug=debug_mode, use_reloader=False)
