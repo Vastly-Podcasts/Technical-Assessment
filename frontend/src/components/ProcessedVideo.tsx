@@ -75,6 +75,8 @@ interface ProcessedVideoProps {
   onLoadedMetadata?: () => void;
   /** Callback when processing state changes */
   onProcessingChange?: (isProcessing: boolean) => void;
+  /** Callback when backend status changes */
+  onBackendStatusChange?: (connected: boolean) => void;
 }
 
 /**
@@ -89,6 +91,7 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   maskThreshold = 0.5,
   onLoadedMetadata,
   onProcessingChange,
+  onBackendStatusChange,
 }) => {
   // Refs for DOM elements
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -96,21 +99,96 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
 
   // Local state
   const [isVideoReady, setIsVideoReady] = useState(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoDimensions, setVideoDimensions] = useState({ width: 0, height: 0 });
+  const [backendStatus, setBackendStatus] = useState<'checking' | 'connected' | 'disconnected'>('checking');
 
   // Initialize segmentation hook
   const { startSegmentation, stopSegmentation, isProcessing, isModelLoaded } =
     useSegmentation({ modelSelection: 0 });
 
+  // Check backend health on mount
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const response = await fetch('http://localhost:8080/api/health');
+        if (response.ok) {
+          setBackendStatus('connected');
+          onBackendStatusChange?.(true);
+        } else {
+          setBackendStatus('disconnected');
+          onBackendStatusChange?.(false);
+        }
+      } catch {
+        setBackendStatus('disconnected');
+        onBackendStatusChange?.(false);
+      }
+    };
+    checkBackend();
+    // Periodically check backend status
+    const interval = setInterval(checkBackend, 10000);
+    return () => clearInterval(interval);
+  }, [onBackendStatusChange]);
+
   // Notify parent of processing state changes
   useEffect(() => {
-    onProcessingChange?.(isProcessing);
-  }, [isProcessing, onProcessingChange]);
+    onProcessingChange?.(isProcessing && isModelLoaded);
+  }, [isProcessing, isModelLoaded, onProcessingChange]);
+
+  // Track video play/pause state
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const handlePlay = () => setIsVideoPlaying(true);
+    const handlePause = () => setIsVideoPlaying(false);
+    const handleEnded = () => setIsVideoPlaying(false);
+
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('ended', handleEnded);
+
+    return () => {
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('ended', handleEnded);
+    };
+  }, []);
+
+  // Attempt autoplay when video is ready
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!isVideoReady || !video) return;
+
+    // Try to start playback
+    video.play().catch(() => {
+      // Autoplay blocked - user needs to click to start
+      console.log('Autoplay blocked, click to play');
+    });
+  }, [isVideoReady]);
+
+  /**
+   * Handle click to play video when autoplay is blocked
+   */
+  const handlePlayClick = useCallback(() => {
+    const video = videoRef.current;
+    if (video && video.paused) {
+      video.play().catch(console.error);
+    }
+  }, []);
 
   /**
    * Composite original and filtered frames using segmentation mask.
    *
    * This is the core algorithm that makes the effect work.
+   * 
+   * MediaPipe Selfie Segmentation mask:
+   * - WHITE (255) = Person/Foreground pixels  
+   * - BLACK (0) = Background pixels
+   *
+   * We want:
+   * - Person → original frame (keep in color)
+   * - Background → filtered frame (apply grayscale/sepia/etc)
    */
   const composite = useCallback(
     (result: SegmentationResult, ctx: CanvasRenderingContext2D) => {
@@ -134,38 +212,49 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
       const maskData = mask.data;
 
       /**
-       * Per-pixel compositing loop
-       *
-       * The mask from MediaPipe has the person probability in the R channel
-       * (all RGB channels are the same for grayscale mask).
-       *
-       * We normalize to 0-1 and use as blend factor:
-       * - maskValue near 1 = person pixel = use original
-       * - maskValue near 0 = background pixel = use filtered
+       * MediaPipe Selfie Segmentation mask interpretation:
+       * 
+       * According to official MediaPipe docs, the mask values are:
+       * - HIGH values (255) = Person/foreground probability
+       * - LOW values (0) = Background probability
+       * 
+       * However, when we draw the mask to canvas and read it back via getImageData,
+       * the rendering might affect values. The mask is a grayscale image.
+       * 
+       * Key: We want PERSON = original (color), BACKGROUND = filtered (grayscale)
+       * 
+       * If mask HIGH = person: blendFactor should be HIGH when mask is HIGH
+       * If mask LOW = person: blendFactor should be HIGH when mask is LOW
        */
+
+      // Use the threshold (0-1 scale, convert to 0-255)
+      const threshold255 = maskThreshold * 255;
+
       for (let i = 0; i < frameData.length; i += 4) {
-        // Get mask value (0-255) and normalize to 0-1
-        const maskValue = maskData[i] / 255;
+        // Get mask value (0-255)
+        const maskValue = maskData[i];
 
-        // Apply threshold to sharpen the boundary
-        // This creates a more defined edge between person and background
-        const blendFactor = maskValue > maskThreshold ? 1 : maskValue / maskThreshold;
-
-        /*
-         * OPTIONAL: Edge feathering
-         *
-         * For softer edges, you could apply a smoothstep function:
-         *
-         * const edge = 0.1; // edge width in mask units
-         * const blendFactor = smoothstep(maskThreshold - edge, maskThreshold + edge, maskValue);
-         *
-         * function smoothstep(edge0: number, edge1: number, x: number): number {
-         *   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
-         *   return t * t * (3 - 2 * t);
-         * }
-         */
+        // STANDARD interpretation: HIGH mask = person, LOW mask = background
+        // blendFactor = 1 → use original (person)
+        // blendFactor = 0 → use filtered (background)
+        let blendFactor: number;
+        
+        if (maskValue >= threshold255) {
+          // HIGH mask = person → use original
+          blendFactor = 1;
+        } else if (maskValue <= threshold255 * 0.3) {
+          // LOW mask = definite background → use filtered
+          blendFactor = 0;
+        } else {
+          // Edge region - smooth blend
+          // Map from [threshold*0.3, threshold] to [0, 1]
+          const edgeLow = threshold255 * 0.3;
+          blendFactor = (maskValue - edgeLow) / (threshold255 - edgeLow);
+        }
 
         // Blend: output = original * blend + filtered * (1 - blend)
+        // blendFactor = 1 → original (person)
+        // blendFactor = 0 → filtered (background)
         outData[i] = frameData[i] * blendFactor + filteredData[i] * (1 - blendFactor);
         outData[i + 1] = frameData[i + 1] * blendFactor + filteredData[i + 1] * (1 - blendFactor);
         outData[i + 2] = frameData[i + 2] * blendFactor + filteredData[i + 2] * (1 - blendFactor);
@@ -221,8 +310,12 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
   }, [isVideoReady, videoDimensions, startSegmentation, stopSegmentation, composite]);
 
   return (
-    <div className="processed-video-container">
-      {/* Hidden video element - source of frames */}
+    <div className="processed-video-container" style={{ position: 'relative' }}>
+      {/* 
+        Video element - positioned off-screen instead of display:none
+        display:none prevents video from playing/loading in some browsers
+        Using position:absolute + visibility:hidden keeps it functional
+      */}
       <video
         ref={videoRef}
         src={src}
@@ -232,19 +325,56 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
         playsInline
         loop
         muted
-        style={{ display: 'none' }}
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          opacity: 0,
+          pointerEvents: 'none',
+        }}
       />
 
       {/* Visible canvas - shows processed result */}
       <canvas
         ref={canvasRef}
         className="processed-video-canvas"
+        onClick={handlePlayClick}
         style={{
           maxWidth: '100%',
           height: 'auto',
           display: isVideoReady ? 'block' : 'none',
+          cursor: !isVideoPlaying ? 'pointer' : 'default',
         }}
       />
+
+      {/* Click to play overlay - shown when video is paused */}
+      {isVideoReady && !isVideoPlaying && isModelLoaded && (
+        <div
+          className="play-overlay"
+          onClick={handlePlayClick}
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            cursor: 'pointer',
+            background: 'rgba(29, 29, 31, 0.7)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            borderRadius: '50%',
+            width: '64px',
+            height: '64px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'transform 0.15s ease',
+          }}
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="rgba(255,255,255,0.9)">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        </div>
+      )}
 
       {/* Loading state */}
       {!isVideoReady && (
@@ -253,8 +383,40 @@ const ProcessedVideo: React.FC<ProcessedVideoProps> = ({
 
       {/* Model loading indicator */}
       {isVideoReady && !isModelLoaded && (
-        <div className="model-loading">Loading AI model...</div>
+        <div className="model-loading" onClick={handlePlayClick} style={{ cursor: 'pointer' }}>
+          <div style={{ fontWeight: 500 }}>Loading AI model...</div>
+          <div style={{ fontSize: '13px', marginTop: '8px', color: '#aeaeb2' }}>
+            Click here if video doesn't start automatically
+          </div>
+        </div>
       )}
+
+      {/* Backend status indicator */}
+      <div
+        className="backend-status"
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '10px',
+          padding: '4px 10px',
+          borderRadius: '4px',
+          fontSize: '11px',
+          fontWeight: 500,
+          letterSpacing: '0.01em',
+          background: backendStatus === 'connected'
+            ? 'rgba(52, 199, 89, 0.12)'
+            : backendStatus === 'checking'
+              ? 'rgba(255, 159, 10, 0.12)'
+              : 'rgba(255, 59, 48, 0.12)',
+          color: backendStatus === 'connected'
+            ? '#248a3d'
+            : backendStatus === 'checking'
+              ? '#9a6700'
+              : '#d70015',
+        }}
+      >
+        {backendStatus === 'connected' ? 'Connected' : backendStatus === 'checking' ? 'Connecting...' : 'Disconnected'}
+      </div>
     </div>
   );
 };

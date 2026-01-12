@@ -67,9 +67,11 @@ const App: React.FC = () => {
   // Processing state for UI feedback
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // Mask threshold - could be exposed via slider for advanced users
-  // Lower = more pixels treated as person, Higher = stricter boundary
-  const [maskThreshold] = useState(0.5);
+  // Mask threshold - controls person/background boundary  
+  // Higher threshold = more strict (fewer pixels as person, more as background)
+  // Lower threshold = more liberal (more pixels as person)
+  // User can adjust via slider
+  const [maskThreshold, setMaskThreshold] = useState(0.7);
 
   /**
    * Handle filter change from selector.
@@ -122,6 +124,32 @@ const App: React.FC = () => {
         {/* Controls */}
         <div className="controls-section">
           <FilterSelector value={filterType} onChange={handleFilterChange} />
+          
+          {/* Threshold slider for tuning */}
+          <div className="threshold-control" style={{ 
+            padding: '12px 20px',
+            background: 'white',
+            borderRadius: '8px',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.08)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px'
+          }}>
+            <label htmlFor="threshold-slider" style={{ fontWeight: 500, color: '#333' }}>
+              Mask Threshold:
+            </label>
+            <input 
+              id="threshold-slider"
+              type="range" 
+              min="0" 
+              max="1" 
+              step="0.05"
+              value={maskThreshold}
+              onChange={(e) => setMaskThreshold(parseFloat(e.target.value))}
+              style={{ width: '150px' }}
+            />
+            <span style={{ minWidth: '40px', color: '#666' }}>{maskThreshold.toFixed(2)}</span>
+          </div>
         </div>
 
         {/* Info panel */}

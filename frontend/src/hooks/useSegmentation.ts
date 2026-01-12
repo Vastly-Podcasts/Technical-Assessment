@@ -153,16 +153,19 @@ export function useSegmentation(config: SegmentationConfig = {}) {
       if (!callbackRef.current || !canvasRef.current) return;
 
       const canvas = canvasRef.current;
-      const ctx = canvas.getContext('2d');
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
       // Draw original frame to canvas to extract ImageData
-      ctx.drawImage(results.image, 0, 0);
+      ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
       const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
       // Draw mask to canvas to extract as ImageData
-      // The mask is in results.segmentationMask
-      ctx.drawImage(results.segmentationMask, 0, 0);
+      // The segmentationMask is a grayscale image where:
+      // - WHITE (255) = Person/foreground 
+      // - BLACK (0) = Background
+      // Note: We need to scale the mask to canvas size
+      ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
       const mask = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
       callbackRef.current({
