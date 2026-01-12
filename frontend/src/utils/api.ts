@@ -206,13 +206,9 @@ export async function apiRequest(
     );
   }
 
-  if (isTimeoutError(lastError)) {
-    throw new ApiError(
-      `Request timeout: Server did not respond within ${timeout}ms`,
-      0,
-      'Timeout'
-    );
-  }
+  // Note: Timeout errors are thrown immediately in the retry loop (line 183),
+  // so they never reach this point. The timeout error handling is complete
+  // at that point, so no additional check is needed here.
 
   if (lastError instanceof ApiError) {
     throw lastError;

@@ -174,18 +174,23 @@ const App: React.FC = () => {
     setVideoDuration(duration);
     
     // Validate and clamp existing timeframes to new duration
-    if (duration > 0 && timeframes.length > 0) {
-      setTimeframes((prev) =>
-        prev
+    // Use functional setState to access current timeframes without dependency
+    if (duration > 0) {
+      setTimeframes((prev) => {
+        // Check if there are any timeframes to process
+        if (prev.length === 0) {
+          return prev;
+        }
+        return prev
           .map((tf) => ({
             ...tf,
             start: Math.min(tf.start, duration),
             end: Math.min(tf.end, duration),
           }))
-          .filter((tf) => tf.start < tf.end) // Remove invalid timeframes
-      );
+          .filter((tf) => tf.start < tf.end); // Remove invalid timeframes
+      });
     }
-  }, [timeframes]);
+  }, []);
 
   /**
    * Reset timeframes when video source changes
