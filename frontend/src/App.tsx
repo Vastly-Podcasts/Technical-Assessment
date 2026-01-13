@@ -51,7 +51,8 @@
  */
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import ProcessedVideo, { FilterSelector, BlendCurveSelector } from './components/ProcessedVideo';
+import ProcessedVideo from './components/ProcessedVideo';
+import { Toolbar } from './components/Toolbar';
 import { FilterType } from './utils/filters';
 import { BlendCurveType } from './utils/compositingCurves';
 import { videoUrl } from './consts';
@@ -281,6 +282,23 @@ const App: React.FC = () => {
 
   return (
     <div className={`app-container mode-${viewMode}`}>
+      {/* Top toolbar with all controls */}
+      <Toolbar
+        filterType={filterType}
+        onFilterChange={handleFilterChange}
+        sensitivity={maskThreshold}
+        onSensitivityChange={setMaskThreshold}
+        blendCurve={blendCurve}
+        onBlendCurveChange={setBlendCurve}
+        edgeSoftness={featherRadius}
+        onEdgeSoftnessChange={setFeatherRadius}
+        fileName={videoFile?.name ?? null}
+        onFileSelect={handleFileSelect}
+        onReset={handleResetVideo}
+        uploadError={uploadError}
+        isProcessing={isProcessing}
+      />
+
       {/* Mode selector - floating top right */}
       <div className="mode-selector">
         {VIEW_MODES.map((mode) => (
@@ -332,115 +350,27 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Editor timeline (only visible in editor mode) */}
+        {/* Editor timeline and timeframe editor (only visible in editor mode) */}
         {viewMode === 'editor' && (
-          <div className="editor-timeline">
-            <div className="timeline-track" ref={timelineTrackRef}>
-              <div 
-                className="timeline-clip" 
-                style={{ left: `${clipPosition}%` }}
-                onMouseDown={handleClipMouseDown}
+          <>
+            <div className="editor-timeline">
+              <div className="timeline-track" ref={timelineTrackRef}>
+                <div
+                  className="timeline-clip"
+                  style={{ left: `${clipPosition}%` }}
+                  onMouseDown={handleClipMouseDown}
+                />
+              </div>
+            </div>
+            <div className="editor-timeframes">
+              <TimeframeEditor
+                timeframes={timeframes}
+                onTimeframesChange={setTimeframes}
+                videoDuration={videoDuration}
               />
             </div>
-          </div>
+          </>
         )}
-      </div>
-
-      {/* Controls bar */}
-      <div className="controls-section">
-        <FilterSelector value={filterType} onChange={handleFilterChange} />
-
-        <div className="threshold-control">
-          <label htmlFor="threshold-slider">Sensitivity</label>
-          <input
-            id="threshold-slider"
-            type="range"
-            min="0"
-            max="1"
-            step="0.05"
-            value={maskThreshold}
-            onChange={(e) => setMaskThreshold(parseFloat(e.target.value))}
-          />
-          <span className="threshold-value">{Math.round(maskThreshold * 100)}%</span>
-        </div>
-
-        <BlendCurveSelector value={blendCurve} onChange={setBlendCurve} />
-
-        <div className="feather-control">
-          <label htmlFor="feather-slider">Edge Softness</label>
-          <input
-            id="feather-slider"
-            type="range"
-            min="0"
-            max="10"
-            step="1"
-            value={featherRadius}
-            onChange={(e) => setFeatherRadius(parseInt(e.target.value, 10))}
-          />
-          <span className="feather-value">{featherRadius}px</span>
-        </div>
-
-        {/* Video upload control */}
-        <div className="upload-control" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-          <label
-            htmlFor="video-upload"
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: videoFile ? '#4a5568' : '#4299e1',
-              color: 'white',
-              borderRadius: '0.375rem',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              textAlign: 'center',
-              display: 'block',
-            }}
-          >
-            {videoFile ? videoFile.name : 'Upload Video'}
-          </label>
-          <input
-            id="video-upload"
-            type="file"
-            accept="video/*"
-            onChange={handleFileSelect}
-            style={{ display: 'none' }}
-          />
-          {videoFile && (
-            <button
-              onClick={handleResetVideo}
-              style={{
-                padding: '0.25rem 0.75rem',
-                backgroundColor: '#e53e3e',
-                color: 'white',
-                border: 'none',
-                borderRadius: '0.375rem',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-              }}
-            >
-              Reset
-            </button>
-          )}
-          {uploadError && (
-            <div
-              style={{
-                color: '#e53e3e',
-                fontSize: '0.75rem',
-                padding: '0.25rem 0.5rem',
-                backgroundColor: '#fed7d7',
-                borderRadius: '0.25rem',
-              }}
-            >
-              {uploadError}
-            </div>
-          )}
-        </div>
-
-        {/* Timeframe Editor */}
-        <TimeframeEditor
-          timeframes={timeframes}
-          onTimeframesChange={setTimeframes}
-          videoDuration={videoDuration}
-        />
       </div>
     </div>
   );

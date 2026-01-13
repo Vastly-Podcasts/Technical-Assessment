@@ -794,6 +794,71 @@ code {
   border-radius: 3px;
 }
 
+/* ============================================================================
+   EDITOR TIMEFRAMES PANEL
+   ============================================================================ */
+
+.editor-timeframes {
+  padding: 16px 20px;
+  background: #1c1c1e;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.editor-timeframes .timeframe-editor {
+  background: transparent;
+  padding: 0;
+}
+
+.editor-timeframes .timeframe-editor h3 {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.editor-timeframes .timeframe-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.editor-timeframes .timeframe-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.editor-timeframes button {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editor-timeframes button:hover {
+  background: rgba(59, 130, 246, 0.3);
+  border-color: rgba(59, 130, 246, 0.5);
+}
+
+.editor-timeframes button.delete-btn {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.editor-timeframes button.delete-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
 
 .mode-editor .controls-section {
   background: #242428;
@@ -1579,4 +1644,564 @@ code {
 
 .mode-editor .timeframe-editor__btn--save:hover {
   background: #2563eb;
+}
+
+/* ============================================================================
+   TOOLBAR - The Lens Bar
+   Elegant, camera-inspired control strip
+   ============================================================================ */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 16px 24px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.toolbar-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.toolbar-section--effects {
+  flex: 1;
+}
+
+.toolbar-section--edges {
+  flex: 1;
+  justify-content: center;
+}
+
+.toolbar-section--file {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+  gap: 16px;
+}
+
+/* Control Groups */
+.toolbar-control-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  user-select: none;
+}
+
+/* Styled Select */
+.toolbar-select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 8px 36px 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  color: var(--text-primary);
+  background-color: var(--bg-input);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 16px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  cursor: pointer;
+  min-width: 140px;
+  transition: all 0.2s var(--ease-out);
+}
+
+.toolbar-select:hover {
+  background-color: var(--bg-hover);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-select:focus {
+  outline: none;
+  border-color: var(--text-primary);
+  box-shadow: 0 0 0 3px rgba(29, 29, 31, 0.1);
+}
+
+.toolbar-select option {
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+/* Styled Slider */
+.toolbar-slider-container {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-slider {
+  --slider-fill: var(--text-primary);
+  --slider-track: var(--bg-input);
+
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100px;
+  height: 6px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.toolbar-slider:hover {
+  --slider-track: var(--bg-hover);
+}
+
+.toolbar-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.toolbar-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-slider::-webkit-slider-thumb:active {
+  transform: scale(1.1);
+}
+
+.toolbar-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--text-primary);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s var(--ease-spring);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.toolbar-slider-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+}
+
+/* Upload Button */
+.toolbar-upload {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-upload-input {
+  display: none;
+}
+
+.toolbar-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--bg-surface);
+  background: var(--text-primary);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.toolbar-upload-btn:hover {
+  background: #3a3a3c;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.toolbar-upload-btn:active {
+  transform: translateY(0);
+}
+
+.toolbar-upload-btn svg {
+  flex-shrink: 0;
+}
+
+.toolbar-file-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+  max-width: 150px;
+}
+
+.toolbar-file-name {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toolbar-reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.2s var(--ease-out);
+}
+
+.toolbar-reset-btn:hover {
+  background: rgba(255, 59, 48, 0.15);
+  color: #e53e3e;
+}
+
+.toolbar-error {
+  font-size: 11px;
+  color: var(--status-error-text);
+  background: var(--status-error);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+/* Status Indicator */
+.toolbar-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--status-active);
+  border-radius: 100px;
+}
+
+.toolbar-status-dot {
+  width: 6px;
+  height: 6px;
+  background: var(--status-active-text);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.toolbar-status-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--status-active-text);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Tooltip */
+.tooltip-trigger {
+  position: relative;
+  display: inline-flex;
+}
+
+.tooltip {
+  position: fixed;
+  transform: translateX(-50%) translateY(-100%);
+  padding: 10px 14px;
+  background: rgba(29, 29, 31, 0.95);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border-radius: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+  pointer-events: none;
+  animation: tooltipFadeIn 0.2s var(--ease-out);
+  max-width: 260px;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-100%);
+  }
+}
+
+.tooltip::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-style: solid;
+  border-color: rgba(29, 29, 31, 0.95) transparent transparent transparent;
+}
+
+.tooltip-content {
+  font-size: 12px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
+.tooltip-shortcut {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+}
+
+/* ============================================================================
+   TOOLBAR - THEATER MODE
+   ============================================================================ */
+.mode-theater .toolbar {
+  background: rgba(10, 10, 10, 0.9);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mode-theater .toolbar-label {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-theater .toolbar-select {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.mode-theater .toolbar-select:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mode-theater .toolbar-select:focus {
+  border-color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+}
+
+.mode-theater .toolbar-slider {
+  --slider-fill: #fff;
+  --slider-track: rgba(255, 255, 255, 0.15);
+}
+
+.mode-theater .toolbar-slider::-webkit-slider-thumb {
+  background: #fff;
+}
+
+.mode-theater .toolbar-slider::-moz-range-thumb {
+  background: #fff;
+}
+
+.mode-theater .toolbar-slider-value {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-theater .toolbar-upload-btn {
+  background: #fff;
+  color: #0a0a0a;
+}
+
+.mode-theater .toolbar-upload-btn:hover {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.mode-theater .toolbar-file-info {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.mode-theater .toolbar-file-name {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mode-theater .toolbar-reset-btn {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-theater .toolbar-reset-btn:hover {
+  background: rgba(255, 59, 48, 0.2);
+  color: #f87171;
+}
+
+.mode-theater .toolbar-status {
+  background: rgba(52, 199, 89, 0.2);
+}
+
+.mode-theater .toolbar-status-dot {
+  background: #4ade80;
+}
+
+.mode-theater .toolbar-status-text {
+  color: #4ade80;
+}
+
+/* ============================================================================
+   TOOLBAR - EDITOR MODE
+   ============================================================================ */
+.mode-editor .toolbar {
+  background: #242428;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mode-editor .toolbar-label {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-editor .toolbar-select {
+  background-color: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.mode-editor .toolbar-select:hover {
+  background-color: rgba(0, 0, 0, 0.4);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.mode-editor .toolbar-select:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+.mode-editor .toolbar-slider {
+  --slider-fill: #3b82f6;
+  --slider-track: rgba(255, 255, 255, 0.1);
+}
+
+.mode-editor .toolbar-slider::-webkit-slider-thumb {
+  background: #3b82f6;
+}
+
+.mode-editor .toolbar-slider::-moz-range-thumb {
+  background: #3b82f6;
+}
+
+.mode-editor .toolbar-slider-value {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-editor .toolbar-upload-btn {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.mode-editor .toolbar-upload-btn:hover {
+  background: #2563eb;
+}
+
+.mode-editor .toolbar-file-info {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.mode-editor .toolbar-file-name {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.mode-editor .toolbar-reset-btn {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-editor .toolbar-reset-btn:hover {
+  background: rgba(255, 59, 48, 0.2);
+  color: #f87171;
+}
+
+.mode-editor .toolbar-status {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.mode-editor .toolbar-status-dot {
+  background: #ef4444;
+}
+
+.mode-editor .toolbar-status-text {
+  color: #ef4444;
+}
+
+/* ============================================================================
+   RESPONSIVE TOOLBAR
+   ============================================================================ */
+@media (max-width: 900px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px 16px;
+  }
+
+  .toolbar-section {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .toolbar-section--effects,
+  .toolbar-section--edges {
+    flex: 1 1 auto;
+    min-width: 200px;
+  }
+
+  .toolbar-section--file {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .toolbar-slider {
+    width: 80px;
+  }
+
+  .toolbar-select {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 600px) {
+  .toolbar-section--effects,
+  .toolbar-section--edges {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+
+  .toolbar-control-group {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .toolbar-slider-container {
+    width: 100%;
+  }
+
+  .toolbar-slider {
+    flex: 1;
+    width: auto;
+  }
 }
