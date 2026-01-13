@@ -389,6 +389,6 @@ describe('FILTER_INFO', () => {
   });
 
   test('has correct count of filters', () => {
-    expect(FILTER_INFO.length).toBe(4);
+    expect(FILTER_INFO.length).toBe(20);
   });
 });

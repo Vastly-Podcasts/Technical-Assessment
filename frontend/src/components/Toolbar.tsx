@@ -23,6 +23,22 @@ const FILTER_DESCRIPTIONS: Record<FilterType, string> = {
   grayscale: 'Classic black & white background',
   sepia: 'Warm vintage photo effect',
   blur: 'Soft focus background blur',
+  invert: 'Photo negative - flip all colors',
+  pixelate: '8-bit retro gaming aesthetic',
+  posterize: 'Pop art poster effect',
+  cyberpunk: 'Neon magenta, blade runner vibes',
+  vaporwave: 'A E S T H E T I C pink & cyan',
+  nightvision: 'Military green phosphor glow',
+  thermal: 'Heat signature infrared look',
+  glitch: 'RGB channel chaos & artifacts',
+  duotone: 'Two-tone purple to orange gradient',
+  saturate: 'Boosted vivid colors',
+  desaturate: 'Subdued muted tones',
+  warm: 'Golden hour sunset glow',
+  cool: 'Arctic blue icy tint',
+  vintage: 'Faded 70s film photograph',
+  noir: 'High contrast black & white drama',
+  emboss: '3D raised surface texture',
 };
 
 const BLEND_CURVE_DESCRIPTIONS: Record<BlendCurveType, string> = {
