@@ -58,7 +58,6 @@ import { BlendCurveType } from './utils/compositingCurves';
 import { videoUrl } from './consts';
 import { isValidVideoFile, isFileSizeValid, MAX_FILE_SIZE } from './utils/videoValidation';
 import { Timeframe, sortTimeframes } from './utils/timeframes';
-import { TimeframeEditor } from './components/TimeframeEditor';
 
 /** Available viewing modes */
 type ViewMode = 'minimal' | 'theater' | 'editor';
@@ -296,6 +295,9 @@ const App: React.FC = () => {
         onFileSelect={handleFileSelect}
         onReset={handleResetVideo}
         uploadError={uploadError}
+        timeframes={timeframes}
+        onTimeframesChange={setTimeframes}
+        videoDuration={videoDuration}
         isProcessing={isProcessing}
       />
 
@@ -350,26 +352,17 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* Editor timeline and timeframe editor (only visible in editor mode) */}
+        {/* Editor timeline (only visible in editor mode) */}
         {viewMode === 'editor' && (
-          <>
-            <div className="editor-timeline">
-              <div className="timeline-track" ref={timelineTrackRef}>
-                <div
-                  className="timeline-clip"
-                  style={{ left: `${clipPosition}%` }}
-                  onMouseDown={handleClipMouseDown}
-                />
-              </div>
-            </div>
-            <div className="editor-timeframes">
-              <TimeframeEditor
-                timeframes={timeframes}
-                onTimeframesChange={setTimeframes}
-                videoDuration={videoDuration}
+          <div className="editor-timeline">
+            <div className="timeline-track" ref={timelineTrackRef}>
+              <div
+                className="timeline-clip"
+                style={{ left: `${clipPosition}%` }}
+                onMouseDown={handleClipMouseDown}
               />
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

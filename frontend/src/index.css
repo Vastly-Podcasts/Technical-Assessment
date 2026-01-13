@@ -1648,15 +1648,10 @@ code {
 
 /* ============================================================================
    TOOLBAR - The Lens Bar
-   Elegant, camera-inspired control strip
+   Elegant, camera-inspired control strip with responsive flow layout
    ============================================================================ */
 
 .toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  padding: 16px 24px;
   background: var(--bg-surface);
   border-bottom: 1px solid var(--border-subtle);
   position: sticky;
@@ -1666,63 +1661,79 @@ code {
   -webkit-backdrop-filter: blur(12px);
 }
 
-.toolbar-section {
+.toolbar-inner {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 20px;
+  gap: 16px 24px;
+  padding: 14px 20px;
+  max-width: 1600px;
+  margin: 0 auto;
 }
 
-.toolbar-section--effects {
-  flex: 1;
-}
-
-.toolbar-section--edges {
-  flex: 1;
-  justify-content: center;
-}
-
-.toolbar-section--file {
-  flex: 0 0 auto;
-  justify-content: flex-end;
-  gap: 16px;
+/* Divider between filter controls and media controls */
+.toolbar-divider {
+  width: 1px;
+  height: 32px;
+  background: var(--border-subtle);
+  flex-shrink: 0;
 }
 
 /* Control Groups */
 .toolbar-control-group {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.toolbar-control-group--upload,
+.toolbar-control-group--timeframes {
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .toolbar-label {
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   white-space: nowrap;
   user-select: none;
+  cursor: help;
+}
+
+/* Styled Select Wrapper */
+.toolbar-select-wrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.toolbar-select-arrow {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--text-tertiary);
 }
 
 /* Styled Select */
 .toolbar-select {
   appearance: none;
   -webkit-appearance: none;
-  padding: 8px 36px 8px 12px;
+  padding: 7px 32px 7px 10px;
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
   color: var(--text-primary);
   background-color: var(--bg-input);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 8px center;
-  background-size: 16px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius);
   cursor: pointer;
-  min-width: 140px;
-  transition: all 0.2s var(--ease-out);
+  min-width: 130px;
+  transition: all 0.15s var(--ease-out);
 }
 
 .toolbar-select:hover {
@@ -1733,7 +1744,7 @@ code {
 .toolbar-select:focus {
   outline: none;
   border-color: var(--text-primary);
-  box-shadow: 0 0 0 3px rgba(29, 29, 31, 0.1);
+  box-shadow: 0 0 0 2px rgba(29, 29, 31, 0.1);
 }
 
 .toolbar-select option {
@@ -1746,7 +1757,7 @@ code {
 .toolbar-slider-container {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .toolbar-slider {
@@ -1755,11 +1766,11 @@ code {
 
   -webkit-appearance: none;
   appearance: none;
-  width: 100px;
-  height: 6px;
+  width: 80px;
+  height: 5px;
   border-radius: 3px;
   cursor: pointer;
-  transition: all 0.2s var(--ease-out);
+  transition: all 0.15s var(--ease-out);
 }
 
 .toolbar-slider:hover {
@@ -1769,40 +1780,37 @@ code {
 .toolbar-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background: var(--text-primary);
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s var(--ease-spring);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  transition: all 0.15s var(--ease-spring);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .toolbar-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
-  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+  transform: scale(1.15);
 }
 
 .toolbar-slider::-webkit-slider-thumb:active {
-  transform: scale(1.1);
+  transform: scale(1.05);
 }
 
 .toolbar-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background: var(--text-primary);
   border: none;
   border-radius: 50%;
   cursor: pointer;
-  transition: all 0.2s var(--ease-spring);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
 }
 
 .toolbar-slider-value {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-tertiary);
-  min-width: 36px;
+  min-width: 32px;
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-family: 'SF Mono', Menlo, Monaco, monospace;
@@ -1813,6 +1821,7 @@ code {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 .toolbar-upload-input {
@@ -1822,21 +1831,22 @@ code {
 .toolbar-upload-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  font-size: 13px;
+  gap: 5px;
+  padding: 7px 12px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--bg-surface);
   background: var(--text-primary);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: all 0.2s var(--ease-out);
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
 }
 
 .toolbar-upload-btn:hover {
   background: #3a3a3c;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
 .toolbar-upload-btn:active {
@@ -1850,15 +1860,15 @@ code {
 .toolbar-file-info {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 10px;
+  gap: 5px;
+  padding: 5px 8px;
   background: var(--bg-input);
   border-radius: var(--radius);
-  max-width: 150px;
+  max-width: 140px;
 }
 
 .toolbar-file-name {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
@@ -1869,15 +1879,16 @@ code {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   background: transparent;
   border: none;
   border-radius: 50%;
   color: var(--text-tertiary);
   cursor: pointer;
-  transition: all 0.2s var(--ease-out);
+  transition: all 0.15s var(--ease-out);
+  flex-shrink: 0;
 }
 
 .toolbar-reset-btn:hover {
@@ -1886,10 +1897,10 @@ code {
 }
 
 .toolbar-error {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--status-error-text);
   background: var(--status-error);
-  padding: 4px 8px;
+  padding: 3px 6px;
   border-radius: 4px;
   white-space: nowrap;
 }
@@ -1898,10 +1909,11 @@ code {
 .toolbar-status {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
+  gap: 5px;
+  padding: 5px 10px;
   background: var(--status-active);
   border-radius: 100px;
+  margin-left: auto;
 }
 
 .toolbar-status-dot {
@@ -1913,46 +1925,283 @@ code {
 }
 
 .toolbar-status-text {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   color: var(--status-active-text);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
-/* Tooltip */
+/* ============================================================================
+   TIMEFRAMES MINI EDITOR
+   ============================================================================ */
+
+.toolbar-timeframes {
+  position: relative;
+}
+
+.toolbar-timeframes-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-input);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+  white-space: nowrap;
+}
+
+.toolbar-timeframes-toggle:hover {
+  background: var(--bg-hover);
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.toolbar-timeframes-toggle svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+}
+
+.toolbar-timeframes-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--bg-hover);
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.toolbar-timeframes-chevron {
+  transition: transform 0.2s var(--ease-out);
+  color: var(--text-tertiary);
+}
+
+.toolbar-timeframes-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.toolbar-timeframes-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 280px;
+  padding: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  z-index: 100;
+  animation: panelSlideIn 0.2s var(--ease-out);
+}
+
+@keyframes panelSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.toolbar-timeframes-add {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  margin-bottom: 10px;
+}
+
+.toolbar-timeframes-range {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toolbar-timeframes-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toolbar-timeframes-input-group label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  min-width: 32px;
+}
+
+.toolbar-timeframes-input-group input[type="range"] {
+  flex: 1;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--bg-input);
+  border-radius: 2px;
+}
+
+.toolbar-timeframes-input-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.toolbar-timeframes-input-group span {
+  font-size: 11px;
+  font-weight: 600;
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+  color: var(--text-secondary);
+  min-width: 36px;
+  text-align: right;
+}
+
+.toolbar-timeframes-add-btn {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  background: var(--text-primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+
+.toolbar-timeframes-add-btn:hover:not(:disabled) {
+  background: #3a3a3c;
+}
+
+.toolbar-timeframes-add-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.toolbar-timeframes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.toolbar-timeframes-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  background: var(--bg-input);
+  border-radius: var(--radius);
+}
+
+.toolbar-timeframes-times {
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'SF Mono', Menlo, Monaco, monospace;
+  color: var(--text-primary);
+}
+
+.toolbar-timeframes-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+
+.toolbar-timeframes-remove:hover {
+  background: rgba(255, 59, 48, 0.15);
+  color: #e53e3e;
+}
+
+.toolbar-timeframes-empty {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  text-align: center;
+  padding: 8px;
+  margin: 0;
+}
+
+/* ============================================================================
+   TOOLTIP
+   ============================================================================ */
+
 .tooltip-trigger {
   position: relative;
   display: inline-flex;
+  cursor: help;
 }
 
 .tooltip {
-  position: fixed;
-  transform: translateX(-50%) translateY(-100%);
-  padding: 10px 14px;
+  position: absolute;
+  left: 50%;
+  padding: 8px 12px;
   background: rgba(29, 29, 31, 0.95);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-radius: 8px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   z-index: 1000;
   pointer-events: none;
-  animation: tooltipFadeIn 0.2s var(--ease-out);
-  max-width: 260px;
+  animation: tooltipFadeIn 0.15s var(--ease-out);
+  max-width: 220px;
+  white-space: normal;
+}
+
+.tooltip--bottom {
+  top: calc(100% + 8px);
+  transform: translateX(-50%);
+}
+
+.tooltip--top {
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%);
 }
 
 @keyframes tooltipFadeIn {
   from {
     opacity: 0;
-    transform: translateX(-50%) translateY(-100%) translateY(8px);
+    transform: translateX(-50%) translateY(4px);
   }
   to {
     opacity: 1;
-    transform: translateX(-50%) translateY(-100%);
+    transform: translateX(-50%) translateY(0);
   }
 }
 
-.tooltip::after {
+.tooltip--bottom::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 6px 6px 6px;
+  border-style: solid;
+  border-color: transparent transparent rgba(29, 29, 31, 0.95) transparent;
+}
+
+.tooltip--top::after {
   content: '';
   position: absolute;
   bottom: -6px;
@@ -1964,17 +2213,17 @@ code {
 }
 
 .tooltip-content {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 400;
   color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
+  line-height: 1.4;
 }
 
 .tooltip-shortcut {
-  margin-top: 6px;
-  padding-top: 6px;
+  margin-top: 4px;
+  padding-top: 4px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   color: rgba(255, 255, 255, 0.5);
   font-family: 'SF Mono', Menlo, Monaco, monospace;
@@ -1984,34 +2233,41 @@ code {
    TOOLBAR - THEATER MODE
    ============================================================================ */
 .mode-theater .toolbar {
-  background: rgba(10, 10, 10, 0.9);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 10, 10, 0.92);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.mode-theater .toolbar-divider {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .mode-theater .toolbar-label {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-theater .toolbar-select {
   background-color: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.9);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.mode-theater .toolbar-select-arrow {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-theater .toolbar-select:hover {
   background-color: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .mode-theater .toolbar-select:focus {
-  border-color: #fff;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.08);
 }
 
 .mode-theater .toolbar-slider {
   --slider-fill: #fff;
-  --slider-track: rgba(255, 255, 255, 0.15);
+  --slider-track: rgba(255, 255, 255, 0.12);
 }
 
 .mode-theater .toolbar-slider::-webkit-slider-thumb {
@@ -2023,7 +2279,7 @@ code {
 }
 
 .mode-theater .toolbar-slider-value {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-theater .toolbar-upload-btn {
@@ -2040,11 +2296,11 @@ code {
 }
 
 .mode-theater .toolbar-file-name {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .mode-theater .toolbar-reset-btn {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-theater .toolbar-reset-btn:hover {
@@ -2052,8 +2308,79 @@ code {
   color: #f87171;
 }
 
+.mode-theater .toolbar-timeframes-toggle {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mode-theater .toolbar-timeframes-toggle:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.mode-theater .toolbar-timeframes-toggle svg {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.mode-theater .toolbar-timeframes-count {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.mode-theater .toolbar-timeframes-panel {
+  background: #1a1a1c;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.mode-theater .toolbar-timeframes-add {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mode-theater .toolbar-timeframes-input-group label {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.mode-theater .toolbar-timeframes-input-group input[type="range"] {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.mode-theater .toolbar-timeframes-input-group input[type="range"]::-webkit-slider-thumb {
+  background: #fff;
+}
+
+.mode-theater .toolbar-timeframes-input-group span {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mode-theater .toolbar-timeframes-add-btn {
+  background: #fff;
+  color: #0a0a0a;
+}
+
+.mode-theater .toolbar-timeframes-add-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.mode-theater .toolbar-timeframes-item {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.mode-theater .toolbar-timeframes-times {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mode-theater .toolbar-timeframes-remove {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.mode-theater .toolbar-timeframes-empty {
+  color: rgba(255, 255, 255, 0.4);
+}
+
 .mode-theater .toolbar-status {
-  background: rgba(52, 199, 89, 0.2);
+  background: rgba(52, 199, 89, 0.15);
 }
 
 .mode-theater .toolbar-status-dot {
@@ -2069,28 +2396,35 @@ code {
    ============================================================================ */
 .mode-editor .toolbar {
   background: #242428;
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.mode-editor .toolbar-divider {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .mode-editor .toolbar-label {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-editor .toolbar-select {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.25);
   border-color: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.9);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.mode-editor .toolbar-select-arrow {
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-editor .toolbar-select:hover {
-  background-color: rgba(0, 0, 0, 0.4);
-  border-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.18);
 }
 
 .mode-editor .toolbar-select:focus {
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
 }
 
 .mode-editor .toolbar-slider {
@@ -2107,7 +2441,7 @@ code {
 }
 
 .mode-editor .toolbar-slider-value {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-editor .toolbar-upload-btn {
@@ -2120,15 +2454,15 @@ code {
 }
 
 .mode-editor .toolbar-file-info {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .mode-editor .toolbar-file-name {
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .mode-editor .toolbar-reset-btn {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.4);
 }
 
 .mode-editor .toolbar-reset-btn:hover {
@@ -2136,8 +2470,79 @@ code {
   color: #f87171;
 }
 
+.mode-editor .toolbar-timeframes-toggle {
+  background: rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mode-editor .toolbar-timeframes-toggle:hover {
+  background: rgba(0, 0, 0, 0.35);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.mode-editor .toolbar-timeframes-toggle svg {
+  color: #3b82f6;
+}
+
+.mode-editor .toolbar-timeframes-count {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+}
+
+.mode-editor .toolbar-timeframes-panel {
+  background: #1c1c1e;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+}
+
+.mode-editor .toolbar-timeframes-add {
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.mode-editor .toolbar-timeframes-input-group label {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.mode-editor .toolbar-timeframes-input-group input[type="range"] {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.mode-editor .toolbar-timeframes-input-group input[type="range"]::-webkit-slider-thumb {
+  background: #3b82f6;
+}
+
+.mode-editor .toolbar-timeframes-input-group span {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.mode-editor .toolbar-timeframes-add-btn {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.mode-editor .toolbar-timeframes-add-btn:hover:not(:disabled) {
+  background: #2563eb;
+}
+
+.mode-editor .toolbar-timeframes-item {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.mode-editor .toolbar-timeframes-times {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.mode-editor .toolbar-timeframes-remove {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.mode-editor .toolbar-timeframes-empty {
+  color: rgba(255, 255, 255, 0.4);
+}
+
 .mode-editor .toolbar-status {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .mode-editor .toolbar-status-dot {
@@ -2151,57 +2556,106 @@ code {
 /* ============================================================================
    RESPONSIVE TOOLBAR
    ============================================================================ */
-@media (max-width: 900px) {
-  .toolbar {
-    flex-wrap: wrap;
-    gap: 16px;
-    padding: 12px 16px;
-  }
 
-  .toolbar-section {
-    flex-wrap: wrap;
-    gap: 12px;
-  }
-
-  .toolbar-section--effects,
-  .toolbar-section--edges {
-    flex: 1 1 auto;
-    min-width: 200px;
-  }
-
-  .toolbar-section--file {
-    flex: 1 1 100%;
-    justify-content: center;
-  }
-
-  .toolbar-slider {
-    width: 80px;
-  }
-
-  .toolbar-select {
-    min-width: 120px;
+/* Large screens - everything in one row */
+@media (min-width: 1100px) {
+  .toolbar-inner {
+    flex-wrap: nowrap;
   }
 }
 
-@media (max-width: 600px) {
-  .toolbar-section--effects,
-  .toolbar-section--edges {
-    flex: 1 1 100%;
-    justify-content: center;
+/* Medium screens - allow wrapping */
+@media (max-width: 1099px) {
+  .toolbar-inner {
+    gap: 12px 20px;
+    padding: 12px 16px;
   }
 
-  .toolbar-control-group {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .toolbar-slider-container {
-    width: 100%;
+  .toolbar-divider {
+    display: none;
   }
 
   .toolbar-slider {
-    flex: 1;
-    width: auto;
+    width: 70px;
+  }
+
+  .toolbar-select {
+    min-width: 115px;
+  }
+}
+
+/* Small screens - stack controls */
+@media (max-width: 768px) {
+  .toolbar-inner {
+    gap: 10px 16px;
+    padding: 10px 14px;
+  }
+
+  .toolbar-control-group {
+    gap: 4px;
+  }
+
+  .toolbar-slider {
+    width: 60px;
+  }
+
+  .toolbar-select {
+    min-width: 100px;
+    padding: 6px 28px 6px 8px;
+    font-size: 12px;
+  }
+
+  .toolbar-upload-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+
+  .toolbar-timeframes-toggle {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+
+  .toolbar-timeframes-panel {
+    min-width: 260px;
+    right: 0;
+    left: auto;
+  }
+}
+
+/* Extra small screens - minimal mode */
+@media (max-width: 480px) {
+  .toolbar-inner {
+    gap: 8px 12px;
+    padding: 8px 12px;
+  }
+
+  .toolbar-label {
+    font-size: 9px;
+  }
+
+  .toolbar-slider {
+    width: 50px;
+  }
+
+  .toolbar-slider-value {
+    min-width: 28px;
+    font-size: 10px;
+  }
+
+  .toolbar-select {
+    min-width: 90px;
+    font-size: 11px;
+  }
+
+  .toolbar-upload-btn span {
+    display: none;
+  }
+
+  .toolbar-upload-btn {
+    padding: 6px 8px;
+  }
+
+  .toolbar-timeframes-toggle span:not(.toolbar-timeframes-count) {
+    display: none;
   }
 }

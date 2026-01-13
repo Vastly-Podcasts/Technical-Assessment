@@ -4,15 +4,16 @@
  * Elegant, accessible toolbar for video filter controls.
  *
  * Design Philosophy: "Lens Bar"
- * - Horizontal strip inspired by camera lens controls
+ * - Responsive flow layout that wraps gracefully
  * - Clear visual hierarchy with grouped controls
  * - Tooltips explain every control in plain language
- * - Smooth microinteractions for premium feel
+ * - Consistent styling across all view modes
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { FilterType, FILTER_INFO } from '../utils/filters';
 import { BlendCurveType, BLEND_CURVE_INFO } from '../utils/compositingCurves';
+import { Timeframe, generateTimeframeId } from '../utils/timeframes';
 
 // ============================================================================
 // TOOLTIP COMPONENT
@@ -22,25 +23,18 @@ interface TooltipProps {
   content: string;
   shortcut?: string;
   children: React.ReactNode;
+  position?: 'top' | 'bottom';
 }
 
-const Tooltip: React.FC<TooltipProps> = ({ content, shortcut, children }) => {
+const Tooltip: React.FC<TooltipProps> = ({ content, shortcut, children, position = 'bottom' }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [position, setPosition] = useState({ x: 0, y: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showTooltip = useCallback(() => {
     timeoutRef.current = setTimeout(() => {
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        setPosition({
-          x: rect.left + rect.width / 2,
-          y: rect.top - 8,
-        });
-      }
       setIsVisible(true);
-    }, 400); // Delay before showing
+    }, 500);
   }, []);
 
   const hideTooltip = useCallback(() => {
@@ -69,14 +63,7 @@ const Tooltip: React.FC<TooltipProps> = ({ content, shortcut, children }) => {
     >
       {children}
       {isVisible && (
-        <div
-          className="tooltip"
-          style={{
-            left: position.x,
-            top: position.y,
-          }}
-          role="tooltip"
-        >
+        <div className={`tooltip tooltip--${position}`} role="tooltip">
           <div className="tooltip-content">{content}</div>
           {shortcut && <div className="tooltip-shortcut">{shortcut}</div>}
         </div>
@@ -93,16 +80,17 @@ interface ControlGroupProps {
   label: string;
   tooltip: string;
   children: React.ReactNode;
+  className?: string;
 }
 
-const ControlGroup: React.FC<ControlGroupProps> = ({ label, tooltip, children }) => {
+const ControlGroup: React.FC<ControlGroupProps> = ({ label, tooltip, children, className = '' }) => {
   return (
-    <Tooltip content={tooltip}>
-      <div className="toolbar-control-group">
+    <div className={`toolbar-control-group ${className}`}>
+      <Tooltip content={tooltip}>
         <label className="toolbar-label">{label}</label>
-        {children}
-      </div>
-    </Tooltip>
+      </Tooltip>
+      {children}
+    </div>
   );
 };
 
@@ -124,18 +112,25 @@ function StyledSelect<T extends string>({
   id,
 }: StyledSelectProps<T>) {
   return (
-    <select
-      id={id}
-      value={value}
-      onChange={(e) => onChange(e.target.value as T)}
-      className="toolbar-select"
-    >
-      {options.map((option) => (
-        <option key={option.id} value={option.id}>
-          {option.name}
-        </option>
-      ))}
-    </select>
+    <div className="toolbar-select-wrapper">
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        className="toolbar-select"
+      >
+        {options.map((option) => (
+          <option key={option.id} value={option.id}>
+            {option.name}
+          </option>
+        ))}
+      </select>
+      <span className="toolbar-select-arrow">
+        <svg width="10" height="6" viewBox="0 0 10 6" fill="currentColor">
+          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      </span>
+    </div>
   );
 }
 
@@ -205,8 +200,8 @@ const UploadButton: React.FC<UploadButtonProps> = ({
     <div className="toolbar-upload">
       <label htmlFor="toolbar-video-upload" className="toolbar-upload-btn">
         <svg
-          width="16"
-          height="16"
+          width="14"
+          height="14"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -218,7 +213,7 @@ const UploadButton: React.FC<UploadButtonProps> = ({
           <polyline points="17 8 12 3 7 8" />
           <line x1="12" y1="3" x2="12" y2="15" />
         </svg>
-        <span>{fileName ? 'Change' : 'Upload'}</span>
+        <span>{fileName ? 'Change Video' : 'Upload Video'}</span>
       </label>
       <input
         id="toolbar-video-upload"
@@ -230,20 +225,178 @@ const UploadButton: React.FC<UploadButtonProps> = ({
       {fileName && (
         <div className="toolbar-file-info">
           <span className="toolbar-file-name" title={fileName}>
-            {fileName.length > 15 ? fileName.slice(0, 12) + '...' : fileName}
+            {fileName.length > 20 ? fileName.slice(0, 17) + '...' : fileName}
           </span>
           <button
             onClick={onReset}
             className="toolbar-reset-btn"
             aria-label="Remove video"
+            type="button"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.3 5.7a1 1 0 0 0-1.4 0L12 10.6 7.1 5.7a1 1 0 0 0-1.4 1.4l4.9 4.9-4.9 4.9a1 1 0 1 0 1.4 1.4l4.9-4.9 4.9 4.9a1 1 0 0 0 1.4-1.4L13.4 12l4.9-4.9a1 1 0 0 0 0-1.4z" />
             </svg>
           </button>
         </div>
       )}
       {error && <div className="toolbar-error">{error}</div>}
+    </div>
+  );
+};
+
+// ============================================================================
+// TIMEFRAME MINI EDITOR
+// ============================================================================
+
+interface TimeframeMiniEditorProps {
+  timeframes: Timeframe[];
+  onTimeframesChange: (timeframes: Timeframe[]) => void;
+  videoDuration: number;
+}
+
+function formatTime(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
+
+const TimeframeMiniEditor: React.FC<TimeframeMiniEditorProps> = ({
+  timeframes,
+  onTimeframesChange,
+  videoDuration,
+}) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [newStart, setNewStart] = useState(0);
+  const [newEnd, setNewEnd] = useState(10);
+
+  // Update defaults when duration changes
+  useEffect(() => {
+    if (videoDuration > 0) {
+      setNewEnd(Math.min(10, videoDuration));
+    }
+  }, [videoDuration]);
+
+  const handleAdd = () => {
+    if (newEnd <= newStart || videoDuration <= 0) return;
+
+    const newTimeframe: Timeframe = {
+      id: generateTimeframeId(),
+      start: Math.min(newStart, videoDuration),
+      end: Math.min(newEnd, videoDuration),
+    };
+
+    onTimeframesChange([...timeframes, newTimeframe]);
+    setNewStart(0);
+    setNewEnd(Math.min(10, videoDuration));
+  };
+
+  const handleRemove = (id: string) => {
+    onTimeframesChange(timeframes.filter((tf) => tf.id !== id));
+  };
+
+  const maxDuration = videoDuration > 0 ? videoDuration : 60;
+
+  return (
+    <div className="toolbar-timeframes">
+      <button
+        className="toolbar-timeframes-toggle"
+        onClick={() => setIsExpanded(!isExpanded)}
+        type="button"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+        <span>Timeframes</span>
+        <span className="toolbar-timeframes-count">
+          {timeframes.length > 0 ? timeframes.length : 'All'}
+        </span>
+        <svg
+          className={`toolbar-timeframes-chevron ${isExpanded ? 'expanded' : ''}`}
+          width="10"
+          height="6"
+          viewBox="0 0 10 6"
+        >
+          <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      </button>
+
+      {isExpanded && (
+        <div className="toolbar-timeframes-panel">
+          {videoDuration > 0 ? (
+            <>
+              <div className="toolbar-timeframes-add">
+                <div className="toolbar-timeframes-range">
+                  <div className="toolbar-timeframes-input-group">
+                    <label>Start</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxDuration}
+                      step={0.5}
+                      value={newStart}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setNewStart(val);
+                        if (val >= newEnd) setNewEnd(Math.min(val + 1, maxDuration));
+                      }}
+                    />
+                    <span>{formatTime(newStart)}</span>
+                  </div>
+                  <div className="toolbar-timeframes-input-group">
+                    <label>End</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={maxDuration}
+                      step={0.5}
+                      value={newEnd}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setNewEnd(val);
+                        if (val <= newStart) setNewStart(Math.max(0, val - 1));
+                      }}
+                    />
+                    <span>{formatTime(newEnd)}</span>
+                  </div>
+                </div>
+                <button
+                  className="toolbar-timeframes-add-btn"
+                  onClick={handleAdd}
+                  disabled={newEnd <= newStart}
+                  type="button"
+                >
+                  + Add
+                </button>
+              </div>
+
+              {timeframes.length > 0 ? (
+                <ul className="toolbar-timeframes-list">
+                  {timeframes.map((tf) => (
+                    <li key={tf.id} className="toolbar-timeframes-item">
+                      <span className="toolbar-timeframes-times">
+                        {formatTime(tf.start)} → {formatTime(tf.end)}
+                      </span>
+                      <button
+                        className="toolbar-timeframes-remove"
+                        onClick={() => handleRemove(tf.id)}
+                        aria-label="Remove"
+                        type="button"
+                      >
+                        ×
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="toolbar-timeframes-empty">Filter applies to entire video</p>
+              )}
+            </>
+          ) : (
+            <p className="toolbar-timeframes-empty">Upload a video first</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -298,6 +451,11 @@ interface ToolbarProps {
   onReset: () => void;
   uploadError: string | null;
 
+  // Timeframes
+  timeframes: Timeframe[];
+  onTimeframesChange: (timeframes: Timeframe[]) => void;
+  videoDuration: number;
+
   // Processing state
   isProcessing?: boolean;
 }
@@ -315,15 +473,16 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onFileSelect,
   onReset,
   uploadError,
+  timeframes,
+  onTimeframesChange,
+  videoDuration,
   isProcessing,
 }) => {
-  // Enrich filter options with human descriptions
   const filterOptions = FILTER_INFO.map((f) => ({
     ...f,
     description: FILTER_DESCRIPTIONS[f.id] || f.description,
   }));
 
-  // Enrich blend curve options with human descriptions
   const blendOptions = BLEND_CURVE_INFO.map((c) => ({
     ...c,
     description: BLEND_CURVE_DESCRIPTIONS[c.id] || c.description,
@@ -331,11 +490,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <div className="toolbar" role="toolbar" aria-label="Video filter controls">
-      {/* Left section: Effect controls */}
-      <div className="toolbar-section toolbar-section--effects">
+      <div className="toolbar-inner">
+        {/* Effect control */}
         <ControlGroup
           label="Effect"
-          tooltip={`Background style: ${FILTER_DESCRIPTIONS[filterType]}`}
+          tooltip={FILTER_DESCRIPTIONS[filterType]}
         >
           <StyledSelect
             id="filter-select"
@@ -345,9 +504,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </ControlGroup>
 
+        {/* Sensitivity control */}
         <ControlGroup
           label="Sensitivity"
-          tooltip="How much of you stays in color. Higher = tighter outline around you."
+          tooltip="How much of you stays in color. Higher = tighter outline."
         >
           <StyledSlider
             id="sensitivity-slider"
@@ -359,13 +519,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             formatValue={(v) => `${Math.round(v * 100)}%`}
           />
         </ControlGroup>
-      </div>
 
-      {/* Center section: Edge controls */}
-      <div className="toolbar-section toolbar-section--edges">
+        {/* Edge Style control */}
         <ControlGroup
           label="Edge Style"
-          tooltip={`How you blend into the background: ${BLEND_CURVE_DESCRIPTIONS[blendCurve]}`}
+          tooltip={BLEND_CURVE_DESCRIPTIONS[blendCurve]}
         >
           <StyledSelect
             id="blend-curve-select"
@@ -375,9 +533,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           />
         </ControlGroup>
 
+        {/* Edge Softness control */}
         <ControlGroup
-          label="Edge Softness"
-          tooltip="How soft the boundary is. 0 = crisp edge, higher = feathered glow."
+          label="Softness"
+          tooltip="Edge blur. 0 = crisp, higher = feathered."
         >
           <StyledSlider
             id="edge-softness-slider"
@@ -389,19 +548,38 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             formatValue={(v) => `${v}px`}
           />
         </ControlGroup>
-      </div>
 
-      {/* Right section: File and status */}
-      <div className="toolbar-section toolbar-section--file">
-        <Tooltip content="Upload your own video to apply effects">
+        {/* Divider */}
+        <div className="toolbar-divider" />
+
+        {/* Upload control */}
+        <ControlGroup
+          label="Video"
+          tooltip="Upload your own video to apply effects"
+          className="toolbar-control-group--upload"
+        >
           <UploadButton
             fileName={fileName}
             onFileSelect={onFileSelect}
             onReset={onReset}
             error={uploadError}
           />
-        </Tooltip>
+        </ControlGroup>
 
+        {/* Timeframes control */}
+        <ControlGroup
+          label="When"
+          tooltip="Define time ranges when the filter is active"
+          className="toolbar-control-group--timeframes"
+        >
+          <TimeframeMiniEditor
+            timeframes={timeframes}
+            onTimeframesChange={onTimeframesChange}
+            videoDuration={videoDuration}
+          />
+        </ControlGroup>
+
+        {/* Live indicator */}
         {isProcessing && (
           <div className="toolbar-status">
             <span className="toolbar-status-dot" />
