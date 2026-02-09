@@ -1,118 +1,59 @@
-# Face Detection Technical Assessment
+# Realtime Person Segmentation using MediaPipe and Flask 
 
-A full-stack application for implementing face detection on video content, designed as a technical assessment platform.
+A full-stack implementation for real-time video processing pipeline utilizing MediaPipe Selfie Segmentation and OpenCV to isolate a person in a video stream and apply selective grayscale background filter.
 
-## Project Structure
+# Key Features
 
-This repository contains two main components:
+- Selective Background Filtering: Dynamically converts background pixels to grayscale while preserving the subject's full color. 
+- Refined Mask Blending: Implemented Gaussian-blurred binary masks to eliminate the "orange halo" effect and ensure smooth transitions around extremities. 
+- Seamless UI Expansion: Replaced the dual-video layout with an "In-Place Overlay" system. When filtering is active, the AI output perfectly masks the source video for a cleaner UX. 
+- Real-Time Synchronization: Uses requestAnimationFrame on the frontend and optimized JPEG compression to maintain high-performance processing loops.
 
-### Backend (`/app`)
-- **Technology**: Python Flask/FastAPI
-- **Purpose**: Provides API endpoints for face detection processing
-- **Key Files**:
-  - `main.py` - Main application entry point
-  - `helpers.py` - Utility functions and helpers
-  - `requirements.txt` - Python dependencies
 
-### Frontend (`/frontend`)
-- **Technology**: React with TypeScript
-- **Purpose**: User interface for video playback and face detection visualization
-- **Key Files**:
-  - `src/App.tsx` - Main React component
-  - `src/components/` - Reusable UI components
-  - `src/consts.ts` - Configuration constants (video URL)
+# Technical Refinements
+During the assessment, I prioritized Product Engineering by addressing visual edge cases:
 
-## Getting Started
+1. Anti-Auraing: Thresholding logic (mask > 0.45) with Gaussian blur to feather edges of segmentation 
+2. Linear Blending: Used formula Output = (Frame * Mask) + (GrayFrame * (1-Mask)) for enhanced alpha matting
+3. Layout Stability: Utilized CSS absolute positioning and aspect-ratio locking to prevent layout shifts during 
+                     raw video to AI output transition.
 
-### Prerequisites
-- Python 3.8+
-- Node.js 16+
-- npm or yarn
 
-### Backend Setup
+# Getting Started
 
-1. Navigate to the project root directory
-2. Create and activate a virtual environment:
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-3. Install Python dependencies:
+# Backend Setup(/app)
+1. Navigate to /app directory
+2. Create virtual environment and install dependencies
    ```bash
    pip install -r requirements.txt
-   ```
-
-4. Start the backend server:
+   ```      
+3. Start the server
    ```bash
-   python app/main.py
+   python3 main.py
    ```
+   Runs on http://127.0.0.1:8080
 
-The backend will run on `http://127.0.0.1:8080`
 
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend
-   ```
-
-2. Install Node.js dependencies:
+# Frontend Setup (/frontend)
+1. Navigate to the /frontend directory.
+2. Install dependencies and start
    ```bash
    npm install
-   ```
-
-3. Start the React development server:
-   ```bash
    npm start
    ```
+Runs on http://localhost:3000
 
-The frontend will run on `http://localhost:3000`
+# Troubleshooting 
+Issue: AttributeError: module 'mediapipe' has no attribute 'solutions'
 
-## API Endpoints
+Root Cause: Modern versions of MediaPipe (v0.10.10+) have moved toward the Tasks API, deprecating the legacy solutions namespace used in this implementation.
 
-### Backend Routes
-- `GET /hello-world` - Test endpoint to verify backend connectivity
-- Additional endpoints can be added for face detection processing
+Resolution: Performed a version rollback to ensure compatibility with the legacy
+  ```bash
+   pip uninstall mediapipe
+   pip install mediapipe==0.10.9
+  ```
 
-## Usage
-
-1. Start both the backend and frontend servers
-2. Open your browser to `http://localhost:3000`
-3. The video will be displayed and ready for face detection
-4. Click "Ping Backend" to test the connection between frontend and backend
-5. Implement face detection logic in the backend and connect it to the frontend
-
-## Development Notes
-
-### For Assessment Takers
-- The main task is to implement face detection functionality
-- Backend: Add face detection processing endpoints in `app/main.py`
-- Frontend: Connect to your backend endpoints from `src/App.tsx`
-- The video URL is configured in `frontend/src/consts.ts`
-
-### Project Configuration
-- Video source is configured in `frontend/src/consts.ts`
-- Backend port is set to 8080 by default
-- Frontend development server runs on port 3000
-
-## Technologies Used
-
-- **Backend**: Python, Flask/FastAPI
-- **Frontend**: React, TypeScript, HTML5 Video
-- **Styling**: CSS3 with modern responsive design
-- **Development**: Hot reload for both frontend and backend
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement your changes
-4. Test both backend and frontend
-5. Submit a pull request
-
-## License
-
-This project is designed for technical assessment purposes.
-
-You may use any tool you wish but you are responsible for understanding all parts of the implementation.
+# Installation
+Backend: cd app && pip install -r requirements.txt && python main.py 
+Frontend: cd frontend && npm install && npm start
